@@ -44,7 +44,7 @@ tools: Read, Grep, Glob, Bash
 ## レビュー結果: 差し戻し
 
 ### 必須
-1. `src/app/api/shiori/route.ts:24` — user_idの検証がなく他人のしおりが読める。RLS前提でもAPI側でも `auth.uid()` を確認すること
+1. `src/app/api/shiori/route.ts:24` — user_idの検証がなく他人のしおりが読める。RLS前提でもAPI側でも `supabase.auth.getUser()` で本人確認すること
 
 ### 推奨
 1. `src/lib/guest-store.ts:80` — 同じ変換処理が3箇所にある。共通関数化を推奨
