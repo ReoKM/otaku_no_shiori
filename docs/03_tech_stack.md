@@ -7,24 +7,28 @@ AIエージェントが実装しやすいよう、広く使われた定番構成
 
 | レイヤー | 採用 | 理由 |
 |----------|------|------|
-| フレームワーク | **Next.js (App Router) + TypeScript** | Vercelとの相性・情報量・エージェントの実装精度が高い |
+| フレームワーク | **Next.js (App Router) + TypeScript** | 情報量・エージェントの実装精度が高い |
 | UI | **Tailwind CSS** | スマホ最優先のUIを速く作れる。デザイントークンを一元管理 |
-| ホスティング | **Vercel(Hobby/無料枠)** | デプロイ自動化が容易。商用利用の規約面で問題が出たら Cloudflare Pages/Workers へ移行(比較を下記) |
+| ホスティング | **Netlify(Free/無料枠)** | 無料プランで商用利用・広告掲載が明示的に可。Next.js SSR・Node関数対応でスタック変更不要(選定経緯を下記) |
 | BaaS | **Supabase(無料枠)** | Auth(X/Google OAuth)+Postgres+Storageが1つで揃う |
 | ゲスト保存 | **IndexedDB(ラッパーとして idb など軽量ライブラリ)** | localStorageの5MB制限を回避し写真ログにも対応 |
-| 共有画像生成 | **satori + resvg(@vercel/og 系)によるサーバー生成** | HTML/CSSライクにテンプレを書けてエージェントが保守しやすい。1080×1920縦長 |
+| 共有画像生成 | **satori + resvg によるサーバー生成(Netlify Functions=Node関数上で実行)** | HTML/CSSライクにテンプレを書けてエージェントが保守しやすい。1080×1920縦長 |
 | 画像リサイズ | クライアント側(Canvas)で長辺1600pxに縮小してからアップロード。**加えてSupabase Storageのバケット設定でMax File Size(2MB以下)と許可MIMEタイプ(image/jpeg, image/webp等)を必ず制限する**(クライアント処理のバイパス対策=多層防御) | Storage無料枠(1GB)の保護 |
 | 地図リンク | GoogleマップのURLスキーム(`https://www.google.com/maps/search/?api=1&query=...`) | APIキー不要・無料。地図SDKはMVPでは使わない |
 | 計測 | Google Analytics 4(または Cloudflare Web Analytics) | 無料。共有画像経由流入はURLパラメータ(`?via=share`)で識別 |
 | 広告 | Google AdSense | 審査通過後に有効化。枠はレイアウトに最初から確保 |
-| CI/CD | GitHub Actions(lint+型チェック+テスト)→ Vercel自動デプロイ | エージェント開発の品質ゲート |
+| CI/CD | GitHub Actions(lint+型チェック+テスト)→ Netlify自動デプロイ | エージェント開発の品質ゲート |
 | 課金(Phase 3) | Stripe | クレジット制課金。MVPでは導入しない |
 
-### Vercel vs Cloudflare(メモ)
+### ホスティング選定の経緯(2026-07-09 オーナー決定)
 
-- Vercel Hobbyは商用サイトの扱いに制約があるため、**AdSense収益が発生する頃にVercel Pro($20/月)へ上げるか、Cloudflare Pages(無料で商用可)へ移行するかを判断**する
-- satori系の画像生成はCloudflare Workersでも動かせる(`workers-og`等)ため移行は可能
-- MVP期(収益ゼロ)はVercel無料枠で開始し、Phase 2の判断ポイントとして記録しておく
+当初はVercel(Hobby)を想定していたが、実装開始前にNetlifyへ変更した。理由:
+
+- **Vercel Hobbyは非商用限定**で、広告(AdSense)掲載の扱いがグレー(Fair Use Guidelinesと プラン規約で解釈が割れる)。広告収益を前提とする本サービスには規約リスクがある
+- **Cloudflare Workers無料プランはCPU時間10ms/リクエスト制限**があり、satori+resvgによる1080×1920画像生成(F7)がほぼ確実に超過する。回避にはWorkers Paid($5/月)か共有画像のクライアント生成への仕様変更が必要
+- **Netlify Freeは商用利用・広告掲載が明示的に可**で、Next.js SSR・Node関数(satori+resvgがそのまま動く)に対応。仕様変更ゼロで移行できる
+
+Netlify無料枠の天井: 帯域100GB/月・関数呼び出し125k回/月・ビルド300分/月。重い写真データはSupabase Storage側に載るため、MVP〜Phase 2規模では十分。超過が見えたらNetlify Pro($19/月)かCloudflare(有料)への移行をオーナーが判断する。
 
 ## データモデル草案
 
@@ -69,7 +73,7 @@ erDiagram
 
 | 項目 | MVP期 | 成長期の目安 |
 |------|-------|--------------|
-| Vercel | 0円 | Pro $20/月 or Cloudflareへ移行で0円 |
+| Netlify | 0円 | Pro $19/月 or Cloudflare(有料)へ移行を判断 |
 | Supabase | 0円 | Pro $25/月(DB 500MB/Storage 1GB超過時) |
 | ドメイン | 約150円/月(年1,500〜2,000円) | 同左 |
 | GA4/AdSense | 0円 | 0円 |

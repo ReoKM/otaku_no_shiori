@@ -34,7 +34,7 @@ description: アナリティクス/グロース担当。KPI・流入・コスト
 | 共有画像生成数 | F7の生成完了数 |
 | 共有経由流入 | `?via=share` 付きセッション数 |
 | リピート率 | 2冊目以降を作ったユーザーの割合 |
-| コスト | Vercel/Supabase/ドメイン/AI APIの実費 |
+| コスト | Netlify/Supabase/ドメイン/AI APIの実費 |
 
 # ルール
 
