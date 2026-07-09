@@ -65,7 +65,7 @@ flowchart TD
 | 11 | アナリティクス/グロース | `.claude/agents/analytics-growth.md` |
 | 12 | 自己改善 | `.claude/agents/self-improver.md` |
 
-スキルは `.claude/skills/<名前>/SKILL.md` に6種(`sns-draft` / `spec-sync` / `weekly-report` / `release-check` / `seed-spot` / `self-improve`)を作成済み。拡張エージェント(13・14)は追加タイミングが来たら同じライティング規約で作成する。
+スキルは `.claude/skills/<名前>/SKILL.md` に7種(`weekly-plan` / `sns-draft` / `spec-sync` / `weekly-report` / `release-check` / `seed-spot` / `self-improve`)を作成済み。拡張エージェント(13・14)は追加タイミングが来たら同じライティング規約で作成する。
 
 ## タスク実行プロトコル(全エージェント・全タスク必須)
 
