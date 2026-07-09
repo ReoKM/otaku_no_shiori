@@ -2,7 +2,7 @@
 
 前提: **オーナーはコードを一切書かない**。開発・運用・集客はAIエージェントチームが行い、
 オーナーは「意思決定・承認・SNS投稿の実行」だけを担う。
-本ドキュメントで体制を確定し、実際の `.claude/agents/*.md`・スキルファイルの作成は次セッション(フォローアップ)で行う。
+本ドキュメントで体制を確定し、実際の定義ファイルは `.claude/agents/`・`.claude/skills/` に作成済み(下の「定義ファイル一覧」参照)。共通ルールはリポジトリ直下の `CLAUDE.md` にある。
 
 ## 体制図(12エージェント+拡張2)
 
@@ -47,6 +47,42 @@ flowchart TD
 |---|--------------|----------------|
 | 13 | **法務/規約・プライバシー** | UGC公開(Phase 2)・課金(Phase 3)開始前に、規約改定・権利リスクレビューを担当 |
 | 14 | **広告/収益化オペレーション** | AdSense審査通過後。広告配置の最適化・収益レポート・クレジット課金設計を担当 |
+
+### 定義ファイル一覧(作成済み)
+
+| # | エージェント | 定義ファイル |
+|---|--------------|--------------|
+| 1 | プロデューサー/PM | `.claude/agents/pm-producer.md` |
+| 2 | UX/UIデザイナー | `.claude/agents/ux-ui-designer.md` |
+| 3 | フロントエンド実装 | `.claude/agents/frontend-dev.md` |
+| 4 | バックエンド/DB実装 | `.claude/agents/backend-dev.md` |
+| 5 | 共有画像テンプレデザイナー | `.claude/agents/share-image-designer.md` |
+| 6 | QA/テスト | `.claude/agents/qa-tester.md` |
+| 7 | コードレビュアー | `.claude/agents/code-reviewer.md` |
+| 8 | スポットDBリサーチ | `.claude/agents/spot-researcher.md` |
+| 9 | SNS運用 | `.claude/agents/sns-writer.md` |
+| 10 | SEO/コンテンツ | `.claude/agents/seo-content.md` |
+| 11 | アナリティクス/グロース | `.claude/agents/analytics-growth.md` |
+| 12 | 自己改善 | `.claude/agents/self-improver.md` |
+
+スキルは `.claude/skills/<名前>/SKILL.md` に6種(`sns-draft` / `spec-sync` / `weekly-report` / `release-check` / `seed-spot` / `self-improve`)を作成済み。拡張エージェント(13・14)は追加タイミングが来たら同じライティング規約で作成する。
+
+## タスク実行プロトコル(全エージェント・全タスク必須)
+
+全文は `CLAUDE.md`、ログテンプレートは `docs/logs/work/README.md` にある。4つの柱:
+
+| # | ルール | 実行方法 |
+|---|--------|----------|
+| 1 | **Goalを設けて動く** | 作業前にGoalを1行で書く。Goalが決められないなら着手せず報告 |
+| 2 | **出来ていない点を必ず報告** | 完了報告の「できていないこと」行は省略禁止。無い場合も「なし」と明記 |
+| 3 | **不明点を必ず報告** | 途中で出た不明点は止まって報告。仮置きで進めたら完了報告に明記 |
+| 4 | **作業ログを必ず残す** | `docs/logs/work/YYYY-MM-DD_<エージェント名>.md` に完了報告と同じ内容を追記 |
+
+確実に実行させる仕組み(3層):
+
+1. **定義への埋め込み**: 全エージェント定義の末尾に同一の「タスク実行プロトコル」節がある(サブエージェント起動時も定義単体で読まれる)
+2. **フォーマット強制**: 完了報告は6項目固定。「なし」の明記を必須にして、無言の省略をフォーマット違反として検出可能にする
+3. **相互チェック**: code-reviewerの観点表・qa-testerの手順・self-improverの監査に「完了報告と作業ログの有無」の確認が入っており、省略は差し戻される
 
 ## 週次の回し方(定常運用)
 
