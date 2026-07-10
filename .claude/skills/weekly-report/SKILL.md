@@ -24,7 +24,7 @@ description: KPI・流入・コストを集計して週次グロースレポー�
 1. `docs/00_vision.md` の北極星指標と `docs/02_roadmap.md` の現フェーズKPIを確認する
 2. 計測データ(GA4等)から今週の数字を取得する
 3. 前週レポート(`docs/reports/` の最新)から前週値を転記して比較する
-4. コスト実費(Vercel/Supabase/ドメイン/AI API)をまとめる
+4. コスト実費(Netlify/Supabase/ドメイン/AI API)をまとめる
 5. 気づきと改善提案(3つ以内)を書く
 6. 数字は推測で埋めない。取れなければ「未計測」と書き、Issue化する
 
