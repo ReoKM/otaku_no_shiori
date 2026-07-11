@@ -1,0 +1,19 @@
+## 02:29 W1タスク#6 ゲスト保存基盤(IndexedDBラッパー実装)
+- Goal: `src/lib/guest-store.ts`にidbベースのCRUD(しおり/持ち物/TODO)+型定義+ユニットテストが揃い、F1/F2/F3実装から共通で呼べる状態のPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `git fetch origin w1-integration` → `w1/task6-guest-store`ブランチを作成
+  - 依存追加: `idb`(dependencies)、`fake-indexeddb`(devDependencies、Node環境のテストでIndexedDB互換実装を使うため)
+  - `src/types/shiori.ts`を新設。`Shiori`/`PackingItem`/`Todo`の型を`supabase/migrations/0001_initial_schema.sql`の列名(snake_case)に合わせて定義。`cover`は`color:#RRGGBB`/`emoji:<絵文字>`のプレフィックス方式のUnion型とした
+  - `src/lib/guest-store.ts`を実装。DB名`otaku-no-shiori-guest`/version 1、ストアは`shiori`(keyPath: id)/`packing_items`(keyPath: id, index: by-shiori_id)/`todos`(keyPath: id, index: by-shiori_id)の3つ。DB接続はモジュールトップレベルでopenDBせず、シングルトンPromiseで遅延初期化(SSR対策)
+  - CRUD関数を実装: `createShiori`/`listShiori`/`getShiori`/`updateShiori`/`deleteShiori`(持ち物・TODOを同一トランザクションでカスケード削除)/`createPackingItem`/`listPackingItemsByShiori`(sort_order昇順)/`updatePackingItem`/`deletePackingItem`/`reorderPackingItems`/todos用の同一セット(`createTodo`/`listTodosByShiori`/`updateTodo`/`deleteTodo`/`reorderTodos`)
+  - `vitest.config.ts`に`setupFiles: ["fake-indexeddb/auto"]`を追加
+  - `src/lib/guest-store.test.ts`を追加(12件): CRUD一通り、カスケード削除、並べ替え(0始まり連番の振り直し・他しおりのID混入時のエラー)、listShiori/listPackingItemsByShiori/listTodosByShioriの並び順を検証
+  - `npm run lint && npm run typecheck && npm test`が全部通ることを確認(lint/typecheckはエラー無し、テスト12件全て成功)
+  - `origin/w1-integration`の最新(タスク#4・#10のdocs追加分)にrebaseし競合無し
+  - PRを作成(base: `w1-integration`)
+- できていないこと: なし
+- 不明点・仮置き:
+  - `listShiori`の並び順は画面仕様(`docs/design/screens/`にS1の並び順記載なし)に明記が無いため、作成日時の新しい順(created_at降順)をデフォルトとして仮置きした。F1/S1実装時に画面仕様と食い違う場合は要調整
+  - `reorderPackingItems`/`reorderTodos`は、指定IDが対象しおりに属さない・存在しない場合にエラーを投げる仕様とした(仕様に明記が無いため、呼び出し側のバグを早期検知する安全側の挙動として仮置き)
+- 成果物: PR #20 (https://github.com/ReoKM/otaku_no_shiori/pull/20) / `src/lib/guest-store.ts` / `src/lib/guest-store.test.ts` / `src/types/shiori.ts` / `vitest.config.ts` / `package.json` / `package-lock.json`
