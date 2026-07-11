@@ -17,3 +17,30 @@
   - `listShiori`の並び順は画面仕様(`docs/design/screens/`にS1の並び順記載なし)に明記が無いため、作成日時の新しい順(created_at降順)をデフォルトとして仮置きした。F1/S1実装時に画面仕様と食い違う場合は要調整
   - `reorderPackingItems`/`reorderTodos`は、指定IDが対象しおりに属さない・存在しない場合にエラーを投げる仕様とした(仕様に明記が無いため、呼び出し側のバグを早期検知する安全側の挙動として仮置き)
 - 成果物: PR #20 (https://github.com/ReoKM/otaku_no_shiori/pull/20) / `src/lib/guest-store.ts` / `src/lib/guest-store.test.ts` / `src/types/shiori.ts` / `vitest.config.ts` / `package.json` / `package-lock.json`
+
+## 12:30 W1タスク#7 F1実装: しおり作成+一覧+詳細シェル(ゲスト保存)
+- Goal: S2でしおりを作成するとIndexedDBに保存され、S1の一覧に表示され、S3詳細シェル(タブ枠)に遷移できる状態のPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `origin/w1-integration`から`w1/task7-f1-shiori`ブランチを作成(依存: タスク#4/#5/#6のマージ済みdocs・guest-store基盤)
+  - ロジックを純粋関数として`src/lib`に切り出し、ユニットテスト付きで実装:
+    - `shiori-validation.ts`(S2バリデーション。タイトル必須30文字/日程必須+前後関係/遠征タイプ必須/目的任意50文字。文言はS2仕様の表と完全一致させた)
+    - `cover.ts`(`color:`/`emoji:`プレフィックスの生成・解釈・デフォルト値解決)
+    - `cover-presets.ts`(プリセット色8種・絵文字8種、tokens.md「6.」準拠)
+    - `trip-type.ts`(遠征タイプ4種の選択肢・ラベル)
+    - `format-date.ts`(S1カードの日程表示。開始=終了なら単一日付、それ以外は「〜」区切り)
+  - S1(`src/app/page.tsx`)を置き換え: ローディング(スケルトン2枚)/空状態(ランディング兼用EmptyState)/一覧(ShioriCard新しい順)/読込エラー(再読み込みボタン)/広告枠プレースホルダー(F9位置確保のみ)/FabButton(1件以上の時のみ)を実装
+  - S2(`src/app/shiori/new/page.tsx`+`src/components/shiori-form/*`)を実装: FieldTitle/FieldDateRange/FieldTripType/FieldPurpose/FieldCover(色/絵文字トグル+8プリセットスウォッチ)+送信バー。送信時にまとめてバリデーションし、エラーは該当項目直下に表示、先頭エラー項目へスクロール。成功時は`createShiori`でIndexedDB保存後`/shiori/[id]/packing`へ遷移
+  - S3シェル(`src/app/shiori/[id]/layout.tsx`+`src/components/shiori-detail/*`)を実装: ヘッダー(戻る+タイトル+日程、ローディング中はスケルトン)+5タブ(持ち物/TODO/旅程/スポット/ログ、`usePathname`ベースでアクティブ判定)+しおり未検出時のフォールバック(「このしおりは見つかりませんでした」+「一覧に戻る」)。ローディング中はタブバーを`opacity-50`+`pointer-events-none`でグレーアウト
+  - `/shiori/[id]/page.tsx`は`/shiori/[id]/packing`へredirect
+  - `/shiori/[id]/packing`・`/shiori/[id]/todo`はタスク#8・#9が置き換えやすいよう最小限のプレースホルダー文言のみ実装
+  - `/shiori/[id]/itinerary`・`/spots`・`/log`は共通`ComingSoon`コンポーネントで準備中表示
+  - `npm run lint && npm run typecheck && npm test && npm run build`が全部通ることを確認(lint 0件、tsc 0件、テスト42件全成功、本番ビルド成功)。開発サーバーを起動し`/`・`/shiori/new`・`/shiori/[id]/packing`・存在しないid・`/shiori/[id]/itinerary`のHTTPステータスを目視確認(200系)
+- できていないこと:
+  - Playwright等によるブラウザ自動操作での視覚確認(375px崩れ確認含む)は未実施。ブラウザバイナリが未キャッシュで新規ダウンロードが必要だったため、lint/tsc/test/buildの成功とTailwindクラスの手動レビュー(44px タップ領域・トークン名クラスの目視確認)による確認に留めた。W1はE2E環境構築がスコープ外(`docs/plans/2026-W28.md`タスク#11参照)のため、次のQAタスクでの手動確認を推奨
+  - しおりIDが変わらないままS3シェルがマウントされ続けるケース(通常のアプリ内遷移では発生しない)ではローディング状態への再遷移を省略している(React Compiler ESLintルール`set-state-in-effect`回避のための実装上の割り切り。下記仮置き参照)
+- 不明点・仮置き:
+  - S2仕様の「不明点・仮置き」欄(文字数上限30/50文字、カバー未選択時のデフォルト`cover-color-1`、色/絵文字トグル切替時の選択リセット)をそのまま踏襲した
+  - S3シェルのIndexedDB読込自体が失敗した場合(通常のnot-foundと別ケース)について、仕様書の状態表に専用の「読込エラー」表示が定義されていないため、既存の「しおりが見つかりません」表示にフォールバックする実装とした
+  - `react-hooks/set-state-in-effect`(ESLint)対応のため、S1再読み込みボタンとS3シェルのローディングリセットの実装を、初回マウント時の初期状態(`loading`)に依存する形に整理した。しおりIDが変わらず再マウントされない通常のアプリ内遷移では影響が無いことを確認済み
+- 成果物: PR #22 (https://github.com/ReoKM/otaku_no_shiori/pull/22) / `src/app/page.tsx` / `src/app/shiori/new/page.tsx` / `src/app/shiori/[id]/layout.tsx` / `src/app/shiori/[id]/page.tsx` / `src/app/shiori/[id]/packing/page.tsx` / `src/app/shiori/[id]/todo/page.tsx` / `src/app/shiori/[id]/itinerary/page.tsx` / `src/app/shiori/[id]/spots/page.tsx` / `src/app/shiori/[id]/log/page.tsx` / `src/components/shiori/*` / `src/components/shiori-form/*` / `src/components/shiori-detail/*` / `src/components/common/*` / `src/lib/shiori-validation.ts`(+test) / `src/lib/cover.ts`(+test) / `src/lib/cover-presets.ts` / `src/lib/trip-type.ts` / `src/lib/format-date.ts`(+test)
