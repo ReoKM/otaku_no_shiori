@@ -1,0 +1,14 @@
+# Netlifyデプロイ設定
+# 対応タスク: docs/plans/2026-W28.md タスク#10
+# 手順書: docs/deploy/netlify.md
+
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  # W2のF7(共有画像生成: satori + resvg)でネイティブバイナリを使うため、
+  # Netlify Functionsのバンドル時にNode_modulesとして外部化する。
+  external_node_modules = ["@resvg/resvg-js"]
