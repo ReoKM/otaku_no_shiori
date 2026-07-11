@@ -32,6 +32,28 @@
 - エージェント定義(12体): `.claude/agents/`
 - スキル(6種): `.claude/skills/`(`/sns-draft` `/spec-sync` `/weekly-report` `/release-check` `/seed-spot` `/self-improve`)
 
+## 開発環境
+
+Next.js(App Router)+ TypeScript + Tailwind CSS。詳細な構成方針は [docs/03_tech_stack.md](./docs/03_tech_stack.md) を参照。
+
+```bash
+npm install       # 依存関係インストール
+npm run dev       # 開発サーバー起動(http://localhost:3000)
+npm run lint      # ESLint
+npm run typecheck # tsc --noEmit
+npm test          # Vitest
+npm run build     # 本番ビルド
+```
+
+### CI
+
+PR作成時に GitHub Actions(`.github/workflows/ci.yml`)が `lint` / `typecheck` / `test` の3ジョブを実行する。すべて成功しないとPRはマージ可能な状態にならない。
+
+### Supabase
+
+- マイグレーションSQLは `supabase/migrations/` に置く(スキーマ+RLSポリシー)
+- 実際のSupabaseプロジェクト作成・APIキー発行はオーナー作業(秘密情報のためエージェントはコード・ログに書かない)。手順は `supabase/README.md` を参照
+
 ## ステータス
 
-仕様策定・エージェント体制の実ファイル化まで完了。次ステップ: MVP開発 W1(基盤+しおり作成/持ち物/TODO)開始。
+W1(基盤+しおり作成/持ち物/TODO)着手中。Next.jsプロジェクト基盤・CI・Supabaseスキーマ(SQL)まで完了。実プロジェクトへの接続・画面実装は次タスク。
