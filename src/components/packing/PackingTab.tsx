@@ -52,6 +52,13 @@ export function PackingTab({ shioriId }: PackingTabProps) {
       const currentTripType = shiori?.trip_type ?? "other";
       let list = await listPackingItemsByShiori(shioriId);
 
+      // テンプレ投入(DB書き込み)の前に必ずキャンセル判定する。
+      // React Strict Mode(開発時)はマウント→アンマウント→再マウントでeffectが2回走るため、
+      // ここで抜けないと両方の実行が投入処理に到達しテンプレが重複する(Issue #25)。
+      if (cancelled) {
+        return;
+      }
+
       if (list.length === 0 && !isPackingTemplateSeeded(shioriId)) {
         try {
           list = await seedPackingTemplate(shioriId, currentTripType);
