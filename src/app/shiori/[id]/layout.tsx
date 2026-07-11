@@ -14,7 +14,7 @@ import type { Shiori } from "@/types/shiori";
  */
 type LoadState = "loading" | "ready" | "not-found";
 
-const TAB_IDS: ShioriTabId[] = ["packing", "todo", "itinerary", "spots", "log"];
+const TAB_IDS: ShioriTabId[] = ["packing", "todo", "itinerary", "log"];
 
 function resolveActiveTab(pathname: string, shioriId: string): ShioriTabId | null {
   const prefix = `/shiori/${shioriId}/`;
