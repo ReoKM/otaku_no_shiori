@@ -31,10 +31,14 @@ export interface ShioriFormErrors {
  */
 export function validateShioriForm(values: ShioriFormValues): ShioriFormErrors {
   const errors: ShioriFormErrors = {};
+  // 保存時はtrim後の値を保存するため、文字数判定もtrim後の長さで行う
+  // (前後スペース込みで上限を超える有効な入力を不当に弾かないため)。
+  const trimmedTitle = values.title.trim();
+  const trimmedPurpose = values.purpose.trim();
 
-  if (values.title.trim().length === 0) {
+  if (trimmedTitle.length === 0) {
     errors.title = "タイトルを入れてください";
-  } else if (values.title.length > SHIORI_TITLE_MAX_LENGTH) {
+  } else if (trimmedTitle.length > SHIORI_TITLE_MAX_LENGTH) {
     errors.title = "タイトルは30文字以内で入力してください";
   }
 
@@ -52,7 +56,7 @@ export function validateShioriForm(values: ShioriFormValues): ShioriFormErrors {
     errors.tripType = "遠征タイプを選んでください";
   }
 
-  if (values.purpose.length > SHIORI_PURPOSE_MAX_LENGTH) {
+  if (trimmedPurpose.length > SHIORI_PURPOSE_MAX_LENGTH) {
     errors.purpose = "目的は50文字以内で入力してください";
   }
 

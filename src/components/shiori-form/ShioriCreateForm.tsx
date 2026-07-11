@@ -74,10 +74,10 @@ export function ShioriCreateForm() {
     try {
       const created = await createShiori({
         title: title.trim(),
-        start_date: startDate,
-        end_date: endDate,
+        start_date: startDate || null,
+        end_date: endDate || null,
         trip_type: tripType as TripType,
-        purpose: purpose.trim() ? purpose.trim() : null,
+        purpose: purpose.trim() || null,
         cover: resolveCover(),
       });
       router.push(`/shiori/${created.id}/packing`);

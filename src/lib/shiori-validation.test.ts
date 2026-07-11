@@ -44,6 +44,16 @@ describe("validateShioriForm", () => {
     expect(errors.title).toBeUndefined();
   });
 
+  it("前後スペース込みで30文字を超えてもトリム後30文字以内ならエラーにならない", () => {
+    const errors = validateShioriForm(baseValues({ title: ` ${"あ".repeat(30)} ` }));
+    expect(errors.title).toBeUndefined();
+  });
+
+  it("目的が前後スペース込みで50文字を超えてもトリム後50文字以内ならエラーにならない", () => {
+    const errors = validateShioriForm(baseValues({ purpose: ` ${"あ".repeat(50)} ` }));
+    expect(errors.purpose).toBeUndefined();
+  });
+
   it("開始日未入力の場合はエラー文言を返す", () => {
     const errors = validateShioriForm(baseValues({ startDate: "" }));
     expect(errors.startDate).toBe("開始日を選択してください");

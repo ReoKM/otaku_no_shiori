@@ -31,8 +31,15 @@ export default function ShioriDetailLayout({ children }: { children: React.React
   const pathname = usePathname();
   const router = useRouter();
 
-  const [state, setState] = useState<LoadState>("loading");
-  const [shiori, setShiori] = useState<Shiori | null>(null);
+  // ロード結果を「どのidのものか」ごと保持する。
+  // 別のしおりidへ遷移した直後は loaded.id !== shioriId となりローディング表示に戻るため、
+  // 前のしおりのタイトル・日程が一瞬表示される不整合が起きない
+  // (effect本体でのsetStateリセットを避けつつ同じ効果を得るための形)。
+  const [loaded, setLoaded] = useState<{
+    id: string;
+    state: Exclude<LoadState, "loading">;
+    shiori: Shiori | null;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,22 +49,25 @@ export default function ShioriDetailLayout({ children }: { children: React.React
           return;
         }
         if (found) {
-          setShiori(found);
-          setState("ready");
+          setLoaded({ id: shioriId, state: "ready", shiori: found });
         } else {
-          setState("not-found");
+          setLoaded({ id: shioriId, state: "not-found", shiori: null });
         }
       })
       .catch(() => {
         // guest-store読込に失敗した場合もS3仕様に定義された「見つからない」表示にフォールバックする(仮置き)。
         if (!cancelled) {
-          setState("not-found");
+          setLoaded({ id: shioriId, state: "not-found", shiori: null });
         }
       });
     return () => {
       cancelled = true;
     };
   }, [shioriId]);
+
+  const current = loaded && loaded.id === shioriId ? loaded : null;
+  const state: LoadState = current ? current.state : "loading";
+  const shiori = current?.shiori ?? null;
 
   const activeTab = resolveActiveTab(pathname, shioriId);
   const dateRange = shiori ? formatDateRange(shiori.start_date, shiori.end_date) : null;
