@@ -121,9 +121,11 @@ export function TodoTab({ shioriId }: { shioriId: string }) {
         shioriId,
         remaining.map((t) => t.id),
       );
+      // reorderTodosと同じ結果をローカルで組み立て、DB再読込を省く(handleMoveと同じパターン)
+      setTodos(remaining.map((t, i) => ({ ...t, sort_order: i })));
+    } else {
+      setTodos([]);
     }
-    const items = await listTodosByShiori(shioriId);
-    setTodos(items);
     if (deletingId === id) {
       setDeletingId(null);
     }
