@@ -12,7 +12,8 @@ export function Toolbar({ count, sortMode, onToggleSort }: ToolbarProps) {
   return (
     <div className="flex h-11 items-center justify-between px-4">
       <p className="text-sm text-neutral-500">{count}件</p>
-      {count >= 2 && (
+      {/* 並べ替えモード中は件数に関わらず「完了」を出し続ける(モードから抜けられなくなるのを防ぐ) */}
+      {(count >= 2 || sortMode) && (
         <button
           type="button"
           onClick={onToggleSort}

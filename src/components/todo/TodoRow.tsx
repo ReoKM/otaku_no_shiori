@@ -3,6 +3,7 @@
  * 参照: docs/design/screens/S3b_TODO.md「TodoRow(通常モード)」「TodoRow(編集中)」「TodoRow(削除確認中)」
  */
 import { formatDueDate } from "@/lib/todo-sort";
+import { TODO_LABEL_MAX_LENGTH } from "@/lib/todo-validation";
 import type { Todo } from "@/types/shiori";
 
 export type TodoRowMode = "view" | "edit" | "delete";
@@ -56,7 +57,7 @@ export function TodoRow({
         <input
           type="text"
           value={editLabel}
-          maxLength={30}
+          maxLength={TODO_LABEL_MAX_LENGTH}
           onChange={(e) => onEditLabelChange(e.target.value)}
           className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
         />

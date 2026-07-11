@@ -113,7 +113,19 @@ export function TodoTab({ shioriId }: { shioriId: string }) {
 
   async function handleConfirmDelete(id: string) {
     await deleteTodo(id);
-    setTodos((prev) => (prev ? prev.filter((t) => t.id !== id) : prev));
+    // 残りの項目のsort_orderを0始まり連番に振り直す。振り直さないと、
+    // createTodoのデフォルトsort_order(=件数)が既存項目と重複しうる。
+    const remaining = (todos ?? []).filter((t) => t.id !== id);
+    if (remaining.length > 0) {
+      await reorderTodos(
+        shioriId,
+        remaining.map((t) => t.id),
+      );
+      // reorderTodosと同じ結果をローカルで組み立て、DB再読込を省く(handleMoveと同じパターン)
+      setTodos(remaining.map((t, i) => ({ ...t, sort_order: i })));
+    } else {
+      setTodos([]);
+    }
     if (deletingId === id) {
       setDeletingId(null);
     }
