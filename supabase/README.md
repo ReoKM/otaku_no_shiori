@@ -36,6 +36,7 @@
 - 子テーブル(`packing_items` / `todos` / `itinerary_entries` / `photos` / `shiori_spots`)は親 `shiori.user_id = auth.uid()` を参照する `EXISTS` ポリシー
 - `shiori.user_id` は `NOT NULL` + `public.users(id)` への外部キー
 - `spots` は `status = 'public'` または `source = 'seed'` のみ全員読み取り可。それ以外は `created_by = auth.uid()` の本人のみ
+- `spots` の更新は本人の行のみ許可し、かつ `with check` で `source = 'ugc'` かつ `status in ('private', 'pending')` に固定(本人が `status` を直接 `public` にしたり `source` を `seed` に書き換えて審査を回避できないようにする)
 - Storage `photos` バケットは `{user_id}/{shiori_id}/{filename}` のパス規約を前提に、先頭フォルダ(`user_id`)が本人と一致する場合のみ読み書き可
 
 ## まだ実装していないもの(次タスク以降)

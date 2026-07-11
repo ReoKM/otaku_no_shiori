@@ -284,7 +284,11 @@ create policy "spots_insert_own_ugc"
 create policy "spots_update_own"
   on public.spots for update
   using (created_by = auth.uid())
-  with check (created_by = auth.uid());
+  with check (
+    created_by = auth.uid()
+    and source = 'ugc'
+    and status in ('private', 'pending')
+  );
 
 create policy "spots_delete_own"
   on public.spots for delete
