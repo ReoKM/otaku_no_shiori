@@ -4,6 +4,10 @@
 
 [build]
   command = "npm run build"
+  # Netlify管理画面(UI)側のPublish directoryがリポジトリ直下になっており、
+  # Next.jsプラグインが「publish = base」を拒否してデプロイが失敗するため、
+  # コード側で明示的に上書きする(netlify.tomlの設定はUI設定より優先される)。
+  publish = ".next"
 
 [build.environment]
   # Next.js 16はNode.js 20.9以上が必須。CI(GitHub Actions)と同じNode 22に固定する。
