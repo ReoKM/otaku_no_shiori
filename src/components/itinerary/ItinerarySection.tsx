@@ -31,9 +31,15 @@ import { ItineraryToolbar } from "./ItineraryToolbar";
 export function ItinerarySection({
   shioriId,
   dayList,
+  highlightEntryId = null,
+  onHighlightConsumed,
 }: {
   shioriId: string;
   dayList: ItineraryDayInfo[] | null;
+  /** Issue #63: 「旅程に追加」直後に強調表示・スクロールする対象のentry id */
+  highlightEntryId?: string | null;
+  /** 次の操作(編集・削除・並べ替え・予定追加を開始した時点)で強調表示を終える通知 */
+  onHighlightConsumed?: () => void;
 }) {
   const [entries, setEntries] = useState<ItineraryEntry[] | null>(null);
   const [sortMode, setSortMode] = useState(false);
@@ -54,6 +60,7 @@ export function ItinerarySection({
   }, [shioriId]);
 
   function handleToggleSort() {
+    onHighlightConsumed?.();
     setEditDraft(null);
     setDeletingId(null);
     setAddFormOpenFor(null);
@@ -61,6 +68,7 @@ export function ItinerarySection({
   }
 
   function handleOpenAddForm(dayDate: string) {
+    onHighlightConsumed?.();
     setEditDraft(null);
     setDeletingId(null);
     setAddFormOpenFor(dayDate);
@@ -84,6 +92,7 @@ export function ItinerarySection({
   }
 
   function handleStartEdit(entry: ItineraryEntry) {
+    onHighlightConsumed?.();
     setDeletingId(null);
     setAddFormOpenFor(null);
     setEditDraft({
@@ -143,6 +152,7 @@ export function ItinerarySection({
   }
 
   function handleStartDelete(entry: ItineraryEntry) {
+    onHighlightConsumed?.();
     setEditDraft(null);
     setDeletingId(entry.id);
   }
@@ -216,6 +226,7 @@ export function ItinerarySection({
             key={entry.id}
             entry={entry}
             mode={editDraft?.id === entry.id ? "edit" : deletingId === entry.id ? "delete" : "view"}
+            highlighted={highlightEntryId === entry.id}
             dayOptions={null}
             onStartEdit={() => handleStartEdit(entry)}
             onStartDelete={() => handleStartDelete(entry)}
@@ -258,6 +269,7 @@ export function ItinerarySection({
             addFormOpen={addFormOpenFor === day.date}
             editDraft={editDraft}
             deletingId={deletingId}
+            highlightEntryId={highlightEntryId}
             onOpenAddForm={() => handleOpenAddForm(day.date)}
             onCancelAddForm={handleCancelAddForm}
             onSaveAddForm={(values) => handleSaveAddForm(day.date, values)}

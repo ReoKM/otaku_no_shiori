@@ -29,6 +29,10 @@ export function ItineraryTab({
 }) {
   const [section, setSection] = useState<ItinerarySegment>(initialSection);
   const [dayList, setDayList] = useState<ItineraryDayInfo[] | null | undefined>(undefined);
+  // Issue #63: 「旅程に追加」直後に強調表示・スクロールする対象のentry id。
+  // `ItinerarySection`側で次の操作(編集・削除・並べ替え・予定追加を開始した時点)が
+  // 行われたら`onHighlightConsumed`経由でnullに戻す(「次の操作まで一時的に強調」)。
+  const [highlightEntryId, setHighlightEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,14 +54,22 @@ export function ItineraryTab({
         dayList === undefined ? (
           <ItinerarySkeleton />
         ) : (
-          <ItinerarySection shioriId={shioriId} dayList={dayList} />
+          <ItinerarySection
+            shioriId={shioriId}
+            dayList={dayList}
+            highlightEntryId={highlightEntryId}
+            onHighlightConsumed={() => setHighlightEntryId(null)}
+          />
         )
       ) : (
         <SpotSection
           shioriId={shioriId}
           dayList={dayList ?? null}
           openFreeFormInitial={initialOpenFreeForm}
-          onAddedToItinerary={() => setSection("itinerary")}
+          onAddedToItinerary={(entryId) => {
+            setSection("itinerary");
+            setHighlightEntryId(entryId);
+          }}
         />
       )}
     </div>

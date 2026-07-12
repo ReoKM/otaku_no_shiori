@@ -27,6 +27,8 @@ interface DayBlockProps {
   addFormOpen: boolean;
   editDraft: EditDraft | null;
   deletingId: string | null;
+  /** Issue #63: 「旅程に追加」直後に強調表示・スクロールする対象のentry id */
+  highlightEntryId?: string | null;
   onOpenAddForm: () => void;
   onCancelAddForm: () => void;
   onSaveAddForm: (values: NewEntryValues) => void;
@@ -53,6 +55,7 @@ export function DayBlock({
   addFormOpen,
   editDraft,
   deletingId,
+  highlightEntryId = null,
   onOpenAddForm,
   onCancelAddForm,
   onSaveAddForm,
@@ -102,6 +105,7 @@ export function DayBlock({
               key={entry.id}
               entry={entry}
               mode={rowMode()}
+              highlighted={highlightEntryId === entry.id}
               dayOptions={dayOptions}
               onStartEdit={() => onStartEdit(entry)}
               onStartDelete={() => onStartDelete(entry)}

@@ -37,7 +37,8 @@ interface SpotSectionProps {
   shioriId: string;
   dayList: ItineraryDayInfo[] | null;
   openFreeFormInitial?: boolean;
-  onAddedToItinerary: () => void;
+  /** 追加した`itinerary_entries`のidを渡す(Issue #63: 呼び出し元で追加行の強調・スクロールに使う) */
+  onAddedToItinerary: (entryId: string) => void;
 }
 
 interface SpotSectionState {
@@ -140,9 +141,9 @@ export function SpotSection({
       spotName: row.name,
       spotMemo: row.memo,
     });
-    await createItineraryEntry(input);
+    const created = await createItineraryEntry(input);
     setAddPickerSpotId(null);
-    onAddedToItinerary();
+    onAddedToItinerary(created.id);
   }
 
   function handleStartDelete(spotId: string) {
