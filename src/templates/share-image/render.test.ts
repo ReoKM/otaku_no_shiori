@@ -82,8 +82,11 @@ function collectText(node: ReactNode, acc: string[] = []): string[] {
   return acc;
 }
 
-/** Reactエレメントツリーからimg要素のsrcだけを再帰的に集める(写真の反映確認用) */
-function collectImageSrcs(node: ReactNode, acc: string[] = []): string[] {
+/**
+ * Reactエレメントツリーから写真URL(background-imageのurl(...))を再帰的に集める(写真の反映確認用)。
+ * satoriはimgのobject-fit非対応のため、写真はdivのbackgroundImageとして描画される(common.tsx参照)。
+ */
+function collectPhotoUrls(node: ReactNode, acc: string[] = []): string[] {
   if (node === null || node === undefined || typeof node === "boolean") {
     return acc;
   }
@@ -92,24 +95,26 @@ function collectImageSrcs(node: ReactNode, acc: string[] = []): string[] {
   }
   if (Array.isArray(node)) {
     for (const child of node) {
-      collectImageSrcs(child as ReactNode, acc);
+      collectPhotoUrls(child as ReactNode, acc);
     }
     return acc;
   }
   if (isValidElement(node)) {
-    if (node.type === "img") {
-      const src = (node.props as { src?: string }).src;
-      if (src) {
-        acc.push(src);
+    const style = (node.props as { style?: { backgroundImage?: string } }).style;
+    const bg = style?.backgroundImage;
+    if (bg) {
+      const m = bg.match(/url\("([^"]+)"\)/);
+      if (m) {
+        acc.push(m[1]);
       }
     }
-    // 関数コンポーネント(PhotoRow等)内のimgも展開して収集する(collectTextと同じ理由)。
+    // 関数コンポーネント(PhotoRow等)の内部も展開して収集する(collectTextと同じ理由)。
     if (typeof node.type === "function") {
-      collectImageSrcs((node.type as (p: unknown) => ReactNode)(node.props), acc);
+      collectPhotoUrls((node.type as (p: unknown) => ReactNode)(node.props), acc);
       return acc;
     }
     const props = node.props as { children?: ReactNode };
-    collectImageSrcs(props.children, acc);
+    collectPhotoUrls(props.children, acc);
   }
   return acc;
 }
@@ -158,14 +163,14 @@ describe.each(TEMPLATES)("%sテンプレート(Reactエレメント構造)", (_t
     expect(text).not.toContain("トレカケース"); // 5件目は表示しない
   });
 
-  it("写真0枚でも要素構築が壊れず、img要素を含まない", () => {
-    expect(() => collectImageSrcs(Template({ ...BASE_PROPS, photos: [] }))).not.toThrow();
-    expect(collectImageSrcs(Template({ ...BASE_PROPS, photos: [] }))).toHaveLength(0);
+  it("写真0枚でも要素構築が壊れず、写真URLを含まない", () => {
+    expect(() => collectPhotoUrls(Template({ ...BASE_PROPS, photos: [] }))).not.toThrow();
+    expect(collectPhotoUrls(Template({ ...BASE_PROPS, photos: [] }))).toHaveLength(0);
   });
 
   it("写真は最大3枚まで表示し、4枚目以降は無視する", () => {
     const photos = [1, 2, 3, 4].map((n) => ({ dataUrl: `${DUMMY_PHOTO_DATA_URL}#${n}` }));
-    const srcs = collectImageSrcs(Template({ ...BASE_PROPS, photos }));
+    const srcs = collectPhotoUrls(Template({ ...BASE_PROPS, photos }));
     expect(srcs).toHaveLength(3);
     expect(srcs).toEqual([`${DUMMY_PHOTO_DATA_URL}#1`, `${DUMMY_PHOTO_DATA_URL}#2`, `${DUMMY_PHOTO_DATA_URL}#3`]);
   });

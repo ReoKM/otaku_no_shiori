@@ -40,7 +40,7 @@ export function NigiyakaTemplate(props: ShareImageProps) {
         width: SHARE_IMAGE_WIDTH,
         height: SHARE_IMAGE_HEIGHT,
         overflow: "hidden",
-        backgroundImage: `linear-gradient(160deg, ${accentColor} 0%, ${COLORS.primary} 55%, ${COLORS.primaryHover} 100%)`,
+        backgroundImage: `linear-gradient(to bottom right, ${accentColor} 0%, ${COLORS.primary} 55%, ${COLORS.primaryHover} 100%)`,
         fontFamily: "Noto Sans JP",
       }}
     >
@@ -129,7 +129,6 @@ export function NigiyakaTemplate(props: ShareImageProps) {
             photos={photos}
             maxWidthPx={PHOTO_AREA_WIDTH}
             heightPx={photos.length === 1 ? 440 : 280}
-            rotationsDeg={photos.length > 1 ? [-3, 3, -2] : undefined}
           />
         ) : null}
 
@@ -167,7 +166,8 @@ export function NigiyakaTemplate(props: ShareImageProps) {
                       fontSize: 32,
                       color: COLORS.textPrimary,
                       overflow: "hidden",
-                      lineClamp: 1,
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {item.text}

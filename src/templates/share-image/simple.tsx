@@ -125,7 +125,8 @@ export function SimpleTemplate(props: ShareImageProps) {
                       fontSize: 32,
                       color: COLORS.textPrimary,
                       overflow: "hidden",
-                      lineClamp: 1,
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {item.text}

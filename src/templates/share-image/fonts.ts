@@ -28,11 +28,12 @@ const LEGACY_USER_AGENT =
 const FONT_FAMILY = "Noto Sans JP";
 
 function extractFontUrl(css: string): string {
-  const match = css.match(/src:\s*url\(([^)]+)\)/);
+  // url("...")・url('...')・url(...)のいずれの形式でもクォートを除いてURLだけを取り出す
+  const match = css.match(/src:\s*url\((['"]?)([^'")]+)\1\)/);
   if (!match) {
     throw new Error("Google Fonts CSSからフォントURLを取得できませんでした");
   }
-  return match[1];
+  return match[2];
 }
 
 async function fetchNotoSansJpWeight(weight: 400 | 700, text: string): Promise<ArrayBuffer> {
@@ -61,7 +62,8 @@ async function fetchNotoSansJpWeight(weight: 400 | 700, text: string): Promise<A
  * fallback文字(URL・記号・半角英数)も必ず含めて呼び出すこと(render.tsのcollectRenderTextを参照)。
  */
 export function toUniqueCharacterText(text: string): string {
-  return Array.from(new Set(Array.from(text))).join("");
+  // Setは文字列をコードポイント単位(サロゲートペア考慮)で分解して受け取れる
+  return Array.from(new Set(text)).join("");
 }
 
 /**

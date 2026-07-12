@@ -126,7 +126,6 @@ export interface PhotoRowProps {
   gapPx?: number;
   radiusPx?: number;
   /** 写真ごとの回転角(deg)。にぎやかテンプレの演出用。省略時は回転しない */
-  rotationsDeg?: number[];
 }
 
 /**
@@ -139,7 +138,6 @@ export function PhotoRow({
   heightPx,
   gapPx = 16,
   radiusPx = 24,
-  rotationsDeg,
 }: PhotoRowProps) {
   const shown = takeFirst(photos, 3);
   if (shown.length === 0) {
@@ -147,6 +145,9 @@ export function PhotoRow({
   }
   const tileWidth = (maxWidthPx - gapPx * (shown.length - 1)) / shown.length;
 
+  // satoriは<img>のobject-fit: coverと transform: rotate をサポートしないため、
+  // divのbackground-image + background-size: cover でアスペクト比を保ったまま描画する
+  // (傾き演出は非対応のため行わない。レビュー指摘反映)。
   return (
     <div style={{ display: "flex", flexDirection: "row", width: maxWidthPx, gap: gapPx }}>
       {shown.map((photo, index) => (
@@ -159,18 +160,11 @@ export function PhotoRow({
             borderRadius: radiusPx,
             overflow: "hidden",
             backgroundColor: COLORS.borderDefault,
-            ...(rotationsDeg?.[index] ? { transform: `rotate(${rotationsDeg[index]}deg)` } : {}),
+            backgroundImage: `url("${photo.dataUrl}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
           }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- satoriはdata URLをそのままimgに渡す必要がある */}
-          <img
-            src={photo.dataUrl}
-            alt=""
-            width={tileWidth}
-            height={heightPx}
-            style={{ objectFit: "cover", width: tileWidth, height: heightPx }}
-          />
-        </div>
+        />
       ))}
     </div>
   );
