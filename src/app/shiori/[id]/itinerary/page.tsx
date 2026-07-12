@@ -1,6 +1,13 @@
-import { ComingSoon } from "@/components/shiori-detail/ComingSoon";
+"use client";
 
-/** 旅程タブ(W1では準備中表示のみ)。参照: docs/design/screens/S3_しおり詳細.md */
+import { useParams } from "next/navigation";
+import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
+
+/**
+ * S3c 旅程タブ。
+ * 参照: docs/design/screens/S3c_旅程スポット.md
+ */
 export default function ItineraryPage() {
-  return <ComingSoon feature="旅程" />;
+  const params = useParams<{ id: string }>();
+  return <ItineraryTab shioriId={params.id} />;
 }
