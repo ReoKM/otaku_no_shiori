@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# .env.example は登録先の見本(実キーを含まない)のためコミット対象
+!.env.example
 
 # vercel
 .vercel

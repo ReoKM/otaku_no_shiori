@@ -3,13 +3,23 @@
 対応タスク: `docs/plans/2026-W28.md` タスク#3。マイグレーションSQLの作成までがこのリポジトリのスコープ。
 実際のSupabaseプロジェクト作成・APIキー発行はオーナー作業(`CLAUDE.md`のルールで秘密情報はコード・ログに書けないため)。
 
+## 接続状況(2026-07-11時点)
+
+- [x] Supabaseプロジェクト作成済み(オーナー作業完了)
+  - Project URL: `https://meatldiffropzstdrrsd.supabase.co`(公開情報。`.env.example`にも記載)
+- [ ] マイグレーション適用(`0001_initial_schema.sql`。下記手順3)
+- [ ] `NEXT_PUBLIC_SUPABASE_ANON_KEY`のNetlify環境変数への登録(下記手順4〜5)
+- [ ] `photos`バケットの設定確認(下記手順6)
+- [ ] X/Google OAuth有効化(W3のF8実装直前でよい)
+
 ## ディレクトリ
 
 - `supabase/migrations/0001_initial_schema.sql`: 初期スキーマ(7テーブル)+ RLSポリシー + Storageバケット設定
+- `.env.example`(リポジトリ直下): 環境変数の登録先見本(実キーは書かない)
 
 ## オーナーに必要な作業
 
-1. [supabase.com](https://supabase.com) でプロジェクトを新規作成する(Organization/Region/DBパスワードを決める。Regionは日本に近い `ap-northeast-1 (Tokyo)` 推奨)
+1. ~~[supabase.com](https://supabase.com) でプロジェクトを新規作成する~~ **完了(2026-07-11)**
 2. Authentication → Providers で **X (Twitter)** と **Google** のOAuthを有効化する(それぞれ開発者ダッシュボードでOAuthアプリ登録が必要。これはF8実装時=W3スコープなのでW1では後回しでよい)
 3. SQL Editor で `supabase/migrations/0001_initial_schema.sql` の内容を実行する(または Supabase CLI で `supabase db push`)
 4. Project Settings → API から次の値を取得する
