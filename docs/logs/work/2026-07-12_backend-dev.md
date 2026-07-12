@@ -1,0 +1,39 @@
+## 13:05 共有画像生成Netlify Function実装(satori+resvg統合、W2タスク#11・Issue #43)
+
+- Goal: しおりデータを受け取り1080×1920のPNGを返すNetlify Functionが実装され、ローカルで動作確認済みのPRが1本出ている
+- 結果: 達成
+- やったこと:
+  - `origin/w2-integration`から`w2/task11-share-image-function`ブランチを作成
+  - `@resvg/resvg-js`を`dependencies`に追加(`npm install`)
+  - `src/lib/share-image-validation.ts`: 入力検証の純粋関数を新規実装
+    - templateId(simple/nigiyaka)必須、title/dateRangeLabel/tripTypeの型・必須・長さ上限
+    - itineraryDigest(最大10件、label最大50文字/text最大100文字)、highlightItems(最大20件・各50文字)
+    - photos(最大3枚、`data:image/(jpeg|png|webp);base64,...`のみ許可。svg+xml/gifなど許可外MIMEは拒否)
+    - ペイロードサイズ上限(5MB)を`validatePayloadSize`で別関数化(Function側でJSON.parse前に判定)
+    - serviceName/serviceUrl(任意項目)の長さ・URL形式検証
+  - `src/lib/share-image-validation.test.ts`: 上記の正常系・異常系をユニットテスト(24件)
+  - `netlify/functions/share-image.mts`: Netlify Functions v2形式(Web標準Request/Response、ESM)で実装
+    - POST以外は405、Content-Typeがapplication/json以外は400
+    - ボディサイズ超過・JSON構文エラー・入力検証エラーはいずれも400+JSON(`{error, details}`)
+    - `renderShareImageToSvg`(タスク#7実装済み、変更なし)でSVG生成→`@resvg/resvg-js`の`Resvg`でPNG化→`image/png`で返却
+    - 生成時の例外は500+JSON(`{error}`)。S5画面(`docs/design/screens/S5_共有画像プレビュー.md`)の「生成失敗」状態に対応
+    - `export const config = { path: "/api/share-image" }`でカスタムパスを指定(`netlify.toml`のexternal_node_modules設定は変更なし・そのまま利用)
+    - importはNetlify Functionsのバンドル(esbuild)がtsconfigのpathエイリアス(`@/*`)を解決しない可能性を考慮し、相対パス(`../../src/...`)で明示
+  - ローカル動作確認: `npx netlify-cli functions:serve --port 9999`を起動し、実際にcurlでPOSTして確認
+    - 正常系(simple/nigiyakaテンプレ、写真0枚/1枚): HTTP 200、`content-type: image/png`、`file`コマンドで`PNG image data, 1080 x 1920, 8-bit/color RGBA, non-interlaced`を確認、`od`でPNGマジックバイト`89 50 4e 47 0d 0a 1a 0a`を確認、ファイルサイズ83532バイト/543460バイト(いずれも>0)
+    - 異常系: templateId不正/title欠落/photos許可外MIME(svg+xml)/photos4枚超過/GETメソッド/Content-Type不一致 → いずれもHTTP 400または405+JSONエラーを確認
+  - 確認後、ローカルの`.netlify/`ビルド出力(functions:serveの生成物、`.gitignore`済み)を削除
+  - `npm run lint && npm run typecheck && npm test` すべて成功(153件のユニットテスト全通過、lintエラー・警告なし)
+- できていないこと:
+  - Netlifyプレビューデプロイでの確認(実サイト未連携のため、ローカルの`functions:serve`実行確認のみ。本番同等のesbuildバンドル設定(`external_node_modules`)込みの動作はプレビューデプロイ時に改めて要確認)
+  - Function本体のハンドラ(`netlify/functions/share-image.mts`)自体の自動テスト(タスク指示どおりローカル実行確認で担保する方針とし、ユニットテストは検証ロジック側`share-image-validation.ts`に寄せた)
+- 不明点・仮置き:
+  - 入力値の各種上限(title 200文字、dateRangeLabel 100文字、itineraryDigest 10件・label 50文字/text 100文字、highlightItems 20件・各50文字、serviceName 50文字、serviceUrl 300文字、ペイロード全体5MB)は仕様(`docs/01_service_spec.md` F7)に具体的な数値指定が無いため、テンプレート側の表示上限(旅程3件・持ち物等4件・写真3枚)に余裕を持たせた値として仮置きした
+  - Netlify Functionの公開パスを`config.path = "/api/share-image"`とした(仕様に指定が無いため、S5画面からの呼び出しやすさを考慮した仮置き。frontend-dev実装時にこのパスを使う想定。変更したい場合は要相談)
+  - Content-Typeヘッダーの`application/json`必須チェックはCLAUDE.mdの「セキュリティ最低ライン」を踏まえた追加の入力検証として仮置きで追加した(仕様に明記は無い)
+- 成果物:
+  - PR: (下記参照。作成後にURLを追記)
+  - `netlify/functions/share-image.mts`
+  - `src/lib/share-image-validation.ts`
+  - `src/lib/share-image-validation.test.ts`
+  - `package.json` / `package-lock.json`(`@resvg/resvg-js`追加)
