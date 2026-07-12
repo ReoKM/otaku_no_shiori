@@ -1,19 +1,38 @@
 import { describe, expect, it } from "vitest";
 import {
+  countPhotosByShiori,
+  createItineraryEntry,
   createPackingItem,
+  createPhoto,
   createShiori,
+  createShioriSpot,
+  createSpot,
   createTodo,
+  deleteItineraryEntry,
   deletePackingItem,
+  deletePhoto,
   deleteShiori,
+  deleteShioriSpot,
+  deleteSpot,
   deleteTodo,
   getShiori,
+  getSpot,
+  listItineraryEntriesByShiori,
   listPackingItemsByShiori,
+  listPhotosByShiori,
   listShiori,
+  listShioriSpotsByShiori,
+  listSpots,
   listTodosByShiori,
+  reorderItineraryEntries,
   reorderPackingItems,
   reorderTodos,
+  updateItineraryEntry,
   updatePackingItem,
+  updatePhoto,
   updateShiori,
+  updateShioriSpot,
+  updateSpot,
   updateTodo,
 } from "./guest-store";
 
@@ -70,17 +89,34 @@ describe("guest-store: shiori", () => {
     await expect(updateShiori("no-such-id", { title: "x" })).rejects.toThrow();
   });
 
-  it("deleteShiori は本体と紐づく持ち物・TODOをカスケード削除する", async () => {
+  it("deleteShiori は本体と紐づく持ち物・TODO・旅程・スポット紐付け・写真をカスケード削除する", async () => {
     const shiori = await createShiori({ title: "削除対象", trip_type: "live" });
     await createPackingItem({ shiori_id: shiori.id, label: "うちわ" });
     await createPackingItem({ shiori_id: shiori.id, label: "ペンライト" });
     await createTodo({ shiori_id: shiori.id, label: "チケット確認" });
+    await createItineraryEntry({ shiori_id: shiori.id, day_date: "2026-08-01", title: "集合" });
+    const spot = await createSpot({ name: "削除対象スポット" });
+    await createShioriSpot({ shiori_id: shiori.id, spot_id: spot.id });
+    await createPhoto({ shiori_id: shiori.id, blob: new Blob(["dummy"], { type: "image/webp" }) });
 
     await deleteShiori(shiori.id);
 
     expect(await getShiori(shiori.id)).toBeUndefined();
     expect(await listPackingItemsByShiori(shiori.id)).toEqual([]);
     expect(await listTodosByShiori(shiori.id)).toEqual([]);
+    expect(await listItineraryEntriesByShiori(shiori.id)).toEqual([]);
+    expect(await listShioriSpotsByShiori(shiori.id)).toEqual([]);
+    expect(await listPhotosByShiori(shiori.id)).toEqual([]);
+    // 紐づいていたUGCスポット本体も孤立データにならないよう削除される
+    expect(await getSpot(spot.id)).toBeUndefined();
+  });
+
+  it("deleteShiori はシードスポット(spotsストアに存在しないid)への紐付けも安全に削除する", async () => {
+    const shiori = await createShiori({ title: "シード紐付けテスト", trip_type: "seichi" });
+    await createShioriSpot({ shiori_id: shiori.id, spot_id: "seed-example-spot" });
+
+    await expect(deleteShiori(shiori.id)).resolves.not.toThrow();
+    expect(await listShioriSpotsByShiori(shiori.id)).toEqual([]);
   });
 });
 
@@ -166,5 +202,176 @@ describe("guest-store: todos", () => {
     const reordered = await listTodosByShiori(shiori.id);
     expect(reordered.map((t) => t.label)).toEqual(["C", "A", "B"]);
     expect(reordered.map((t) => t.sort_order)).toEqual([0, 1, 2]);
+  });
+});
+
+describe("guest-store: itinerary_entries", () => {
+  it("CRUD一通りとday_date昇順→sort_order昇順の並び順を確認する", async () => {
+    const shiori = await createShiori({ title: "旅程テスト用", trip_type: "live" });
+
+    const day2First = await createItineraryEntry({
+      shiori_id: shiori.id,
+      day_date: "2026-08-02",
+      title: "2日目最初の予定",
+    });
+    const day1First = await createItineraryEntry({
+      shiori_id: shiori.id,
+      day_date: "2026-08-01",
+      title: "1日目最初の予定",
+      time: "09:00",
+      place_name: "東京ドーム",
+    });
+    const day1Second = await createItineraryEntry({
+      shiori_id: shiori.id,
+      day_date: "2026-08-01",
+      title: "1日目2番目の予定",
+    });
+
+    expect(day1First.sort_order).toBe(0);
+    expect(day1First.place_name).toBe("東京ドーム");
+    expect(day1First.time).toBe("09:00");
+    expect(day1Second.sort_order).toBe(1);
+    expect(day2First.sort_order).toBe(0);
+
+    const listed = await listItineraryEntriesByShiori(shiori.id);
+    expect(listed.map((e) => e.title)).toEqual([
+      "1日目最初の予定",
+      "1日目2番目の予定",
+      "2日目最初の予定",
+    ]);
+
+    const updated = await updateItineraryEntry(day1First.id, { title: "更新後タイトル" });
+    expect(updated.title).toBe("更新後タイトル");
+    expect(updated.place_name).toBe("東京ドーム");
+
+    await deleteItineraryEntry(day1Second.id);
+    const afterDelete = await listItineraryEntriesByShiori(shiori.id);
+    expect(afterDelete.map((e) => e.title)).toEqual(["更新後タイトル", "2日目最初の予定"]);
+  });
+
+  it("reorderItineraryEntries は指定順にsort_orderを0始まりで振り直す", async () => {
+    const shiori = await createShiori({ title: "旅程並べ替え", trip_type: "live" });
+    const a = await createItineraryEntry({ shiori_id: shiori.id, day_date: "2026-08-01", title: "A" });
+    const b = await createItineraryEntry({ shiori_id: shiori.id, day_date: "2026-08-01", title: "B" });
+    const c = await createItineraryEntry({ shiori_id: shiori.id, day_date: "2026-08-01", title: "C" });
+
+    await reorderItineraryEntries(shiori.id, [c.id, a.id, b.id]);
+
+    const reordered = await listItineraryEntriesByShiori(shiori.id);
+    expect(reordered.map((e) => e.title)).toEqual(["C", "A", "B"]);
+    expect(reordered.map((e) => e.sort_order)).toEqual([0, 1, 2]);
+  });
+
+  it("他のしおりに属するIDを含むreorderItineraryEntriesはエラーになる", async () => {
+    const shioriA = await createShiori({ title: "A", trip_type: "live" });
+    const shioriB = await createShiori({ title: "B", trip_type: "live" });
+    const entryA = await createItineraryEntry({ shiori_id: shioriA.id, day_date: "2026-08-01", title: "A予定" });
+    const entryB = await createItineraryEntry({ shiori_id: shioriB.id, day_date: "2026-08-01", title: "B予定" });
+
+    await expect(reorderItineraryEntries(shioriA.id, [entryA.id, entryB.id])).rejects.toThrow();
+  });
+});
+
+describe("guest-store: spots", () => {
+  it("createSpot はsource='ugc'/status='private'固定で保存し、CRUDが一通り動く", async () => {
+    const created = await createSpot({ name: "推しの聖地", description: "作中の舞台", category: "聖地" });
+
+    expect(created.id).toBeTruthy();
+    expect(created.name).toBe("推しの聖地");
+    expect(created.description).toBe("作中の舞台");
+    expect(created.area).toBeNull();
+    expect(created.source).toBe("ugc");
+    expect(created.status).toBe("private");
+
+    const fetched = await getSpot(created.id);
+    expect(fetched).toEqual(created);
+
+    const updated = await updateSpot(created.id, { name: "更新後スポット名" });
+    expect(updated.name).toBe("更新後スポット名");
+    expect(updated.source).toBe("ugc");
+
+    await deleteSpot(created.id);
+    expect(await getSpot(created.id)).toBeUndefined();
+  });
+
+  it("listSpots は作成日時の新しい順で返す", async () => {
+    const first = await createSpot({ name: "先に作成したスポット" });
+    await sleep(5);
+    const second = await createSpot({ name: "後に作成したスポット" });
+
+    const all = await listSpots();
+    const ids = all.map((s) => s.id);
+    expect(ids.indexOf(second.id)).toBeLessThan(ids.indexOf(first.id));
+  });
+
+  it("存在しないIDのupdateSpotはエラーになる", async () => {
+    await expect(updateSpot("no-such-spot-id", { name: "x" })).rejects.toThrow();
+  });
+});
+
+describe("guest-store: shiori_spots", () => {
+  it("複合キー(shiori_id, spot_id)でCRUDが一通り動く", async () => {
+    const shiori = await createShiori({ title: "スポット紐付けテスト", trip_type: "seichi" });
+    const spot = await createSpot({ name: "行きたいスポット" });
+
+    const created = await createShioriSpot({ shiori_id: shiori.id, spot_id: spot.id, memo: "開演前に寄る" });
+    expect(created.is_visited).toBe(false);
+    expect(created.memo).toBe("開演前に寄る");
+
+    const listed = await listShioriSpotsByShiori(shiori.id);
+    expect(listed).toEqual([created]);
+
+    const updated = await updateShioriSpot(shiori.id, spot.id, { is_visited: true });
+    expect(updated.is_visited).toBe(true);
+    expect(updated.memo).toBe("開演前に寄る");
+
+    await deleteShioriSpot(shiori.id, spot.id);
+    expect(await listShioriSpotsByShiori(shiori.id)).toEqual([]);
+  });
+
+  it("シードスポットのid(spotsストアに存在しないid)でも紐付けを作成できる", async () => {
+    const shiori = await createShiori({ title: "シード紐付け", trip_type: "live" });
+
+    const created = await createShioriSpot({ shiori_id: shiori.id, spot_id: "seed-tokyo-dome" });
+    expect(created.spot_id).toBe("seed-tokyo-dome");
+
+    const listed = await listShioriSpotsByShiori(shiori.id);
+    expect(listed.map((s) => s.spot_id)).toEqual(["seed-tokyo-dome"]);
+  });
+
+  it("存在しない紐付けのupdateShioriSpotはエラーになる", async () => {
+    await expect(updateShioriSpot("no-such-shiori", "no-such-spot", { is_visited: true })).rejects.toThrow();
+  });
+});
+
+describe("guest-store: photos", () => {
+  it("CRUD一通りとcountPhotosByShioriを確認する", async () => {
+    const shiori = await createShiori({ title: "写真ログテスト", trip_type: "live" });
+    const blob1 = new Blob(["dummy-image-1"], { type: "image/webp" });
+    const blob2 = new Blob(["dummy-image-2"], { type: "image/webp" });
+
+    const photo1 = await createPhoto({ shiori_id: shiori.id, blob: blob1, day_date: "2026-08-01" });
+    const photo2 = await createPhoto({ shiori_id: shiori.id, blob: blob2, caption: "開演前の様子" });
+
+    expect(photo1.day_date).toBe("2026-08-01");
+    expect(photo1.caption).toBeNull();
+    expect(photo2.caption).toBe("開演前の様子");
+    expect(photo2.blob).toBeInstanceOf(Blob);
+
+    expect(await countPhotosByShiori(shiori.id)).toBe(2);
+
+    const updated = await updatePhoto(photo1.id, { caption: "後から追加したキャプション" });
+    expect(updated.caption).toBe("後から追加したキャプション");
+    expect(updated.blob).toBeInstanceOf(Blob);
+
+    await deletePhoto(photo2.id);
+    expect(await countPhotosByShiori(shiori.id)).toBe(1);
+
+    const listed = await listPhotosByShiori(shiori.id);
+    expect(listed.map((p) => p.id)).toEqual([photo1.id]);
+  });
+
+  it("存在しないIDのupdatePhotoはエラーになる", async () => {
+    await expect(updatePhoto("no-such-photo-id", { caption: "x" })).rejects.toThrow();
   });
 });
