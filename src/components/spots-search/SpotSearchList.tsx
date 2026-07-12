@@ -33,11 +33,18 @@ export function SpotSearchList({ shioriId, initialKeyword, initialCategory }: Sp
 
   useEffect(() => {
     let cancelled = false;
-    listShioriSpotsByShiori(shioriId).then((rows) => {
-      if (!cancelled) {
-        setAddedSpotIds(new Set(rows.map((row) => row.spot_id)));
-      }
-    });
+    listShioriSpotsByShiori(shioriId)
+      .then((rows) => {
+        if (!cancelled) {
+          setAddedSpotIds(new Set(rows.map((row) => row.spot_id)));
+        }
+      })
+      .catch(() => {
+        // 読込失敗時はローディングのまま固まらないよう「追加済みなし」として続行する
+        if (!cancelled) {
+          setAddedSpotIds(new Set());
+        }
+      });
     return () => {
       cancelled = true;
     };

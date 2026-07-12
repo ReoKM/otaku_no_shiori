@@ -61,13 +61,20 @@ export function SpotSection({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listShioriSpotsByShiori(shioriId), listSpots()]).then(([shioriSpots, ugcSpots]) => {
-      if (cancelled) {
-        return;
-      }
-      const rows = resolveSpotRows(shioriSpots, buildUgcSpotMap(ugcSpots));
-      setState({ shioriSpots, rows });
-    });
+    Promise.all([listShioriSpotsByShiori(shioriId), listSpots()])
+      .then(([shioriSpots, ugcSpots]) => {
+        if (cancelled) {
+          return;
+        }
+        const rows = resolveSpotRows(shioriSpots, buildUgcSpotMap(ugcSpots));
+        setState({ shioriSpots, rows });
+      })
+      .catch(() => {
+        // 読込失敗時はスケルトンのまま固まらないよう空一覧として表示する
+        if (!cancelled) {
+          setState({ shioriSpots: [], rows: [] });
+        }
+      });
     return () => {
       cancelled = true;
     };

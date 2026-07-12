@@ -36,16 +36,23 @@ export function SpotSearchDetail({ shioriId, spot, backQueryString }: SpotSearch
 
   async function handleAdd() {
     setPending(true);
-    await createShioriSpot({ shiori_id: shioriId, spot_id: spot.id });
-    setAdded(true);
-    setPending(false);
+    try {
+      await createShioriSpot({ shiori_id: shioriId, spot_id: spot.id });
+      setAdded(true);
+    } finally {
+      // 書き込み失敗時もpendingを必ず解除し、ボタンが操作不能のまま固まるのを防ぐ
+      setPending(false);
+    }
   }
 
   async function handleRemove() {
     setPending(true);
-    await deleteShioriSpot(shioriId, spot.id);
-    setAdded(false);
-    setPending(false);
+    try {
+      await deleteShioriSpot(shioriId, spot.id);
+      setAdded(false);
+    } finally {
+      setPending(false);
+    }
   }
 
   const categoryLabel = getSpotCategoryLabel(spot.category);

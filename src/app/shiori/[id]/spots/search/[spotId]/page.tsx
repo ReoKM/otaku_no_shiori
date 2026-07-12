@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SpotSearchDetail } from "@/components/spots-search/SpotSearchDetail";
 import { getSeedSpotById } from "@/lib/seed-spots";
 
@@ -34,9 +35,9 @@ export default async function SpotSearchDetailPage({
     return (
       <div className="flex flex-1 flex-col items-center gap-3 px-4 py-10 text-center">
         <p className="text-red-600">このスポットは見つかりませんでした</p>
-        <a href={`/shiori/${id}/spots/search`} className="h-11 px-4 text-pink-500">
+        <Link href={`/shiori/${id}/spots/search`} className="h-11 px-4 text-pink-500">
           一覧に戻る
-        </a>
+        </Link>
       </div>
     );
   }
