@@ -1,0 +1,12 @@
+## Netlifyデプロイ設定ファイル+接続手順書作成
+- Goal: `netlify.toml`とデプロイ手順書(環境変数一覧・auto-publish無効化手順を含む)が揃ったPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `netlify.toml`を新設。`[build] command = "npm run build"`、`[[plugins]] package = "@netlify/plugin-nextjs"`、`[functions] external_node_modules = ["@resvg/resvg-js"]`を設定
+  - `docs/deploy/netlify.md`を新設。オーナー向け接続手順(未連携時/連携済み時の確認項目)、環境変数一覧(現時点は無し。W2/W3用の`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY`を`supabase/README.md`と整合させて将来用として明記)、auto-publish無効化(Locked deploys)の操作手順、本番デプロイのクレジット消費(15クレジット/回・月300上限)の注意を記載
+  - 実際のキー値は一切記載していないことを確認
+  - `npm run lint` / `npx tsc --noEmit` / `npm test` が通ることを確認(設定ファイル・ドキュメントのみの変更でコードへの影響なし)
+- できていないこと: なし
+- 不明点・仮置き:
+  - Netlifyの「Lock deploys」機能はUIバージョンにより文言が異なる可能性があるため、手順書では「Stop builds」等の類似設定も含めて対応する旨を明記した(実操作はオーナー作業のため確認は依頼ベース)
+- 成果物: PR作成後に追記(下記参照)

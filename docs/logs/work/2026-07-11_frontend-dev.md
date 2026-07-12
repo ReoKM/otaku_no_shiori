@@ -1,0 +1,72 @@
+## 02:29 W1タスク#6 ゲスト保存基盤(IndexedDBラッパー実装)
+- Goal: `src/lib/guest-store.ts`にidbベースのCRUD(しおり/持ち物/TODO)+型定義+ユニットテストが揃い、F1/F2/F3実装から共通で呼べる状態のPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `git fetch origin w1-integration` → `w1/task6-guest-store`ブランチを作成
+  - 依存追加: `idb`(dependencies)、`fake-indexeddb`(devDependencies、Node環境のテストでIndexedDB互換実装を使うため)
+  - `src/types/shiori.ts`を新設。`Shiori`/`PackingItem`/`Todo`の型を`supabase/migrations/0001_initial_schema.sql`の列名(snake_case)に合わせて定義。`cover`は`color:#RRGGBB`/`emoji:<絵文字>`のプレフィックス方式のUnion型とした
+  - `src/lib/guest-store.ts`を実装。DB名`otaku-no-shiori-guest`/version 1、ストアは`shiori`(keyPath: id)/`packing_items`(keyPath: id, index: by-shiori_id)/`todos`(keyPath: id, index: by-shiori_id)の3つ。DB接続はモジュールトップレベルでopenDBせず、シングルトンPromiseで遅延初期化(SSR対策)
+  - CRUD関数を実装: `createShiori`/`listShiori`/`getShiori`/`updateShiori`/`deleteShiori`(持ち物・TODOを同一トランザクションでカスケード削除)/`createPackingItem`/`listPackingItemsByShiori`(sort_order昇順)/`updatePackingItem`/`deletePackingItem`/`reorderPackingItems`/todos用の同一セット(`createTodo`/`listTodosByShiori`/`updateTodo`/`deleteTodo`/`reorderTodos`)
+  - `vitest.config.ts`に`setupFiles: ["fake-indexeddb/auto"]`を追加
+  - `src/lib/guest-store.test.ts`を追加(12件): CRUD一通り、カスケード削除、並べ替え(0始まり連番の振り直し・他しおりのID混入時のエラー)、listShiori/listPackingItemsByShiori/listTodosByShioriの並び順を検証
+  - `npm run lint && npm run typecheck && npm test`が全部通ることを確認(lint/typecheckはエラー無し、テスト12件全て成功)
+  - `origin/w1-integration`の最新(タスク#4・#10のdocs追加分)にrebaseし競合無し
+  - PRを作成(base: `w1-integration`)
+- できていないこと: なし
+- 不明点・仮置き:
+  - `listShiori`の並び順は画面仕様(`docs/design/screens/`にS1の並び順記載なし)に明記が無いため、作成日時の新しい順(created_at降順)をデフォルトとして仮置きした。F1/S1実装時に画面仕様と食い違う場合は要調整
+  - `reorderPackingItems`/`reorderTodos`は、指定IDが対象しおりに属さない・存在しない場合にエラーを投げる仕様とした(仕様に明記が無いため、呼び出し側のバグを早期検知する安全側の挙動として仮置き)
+- 成果物: PR #20 (https://github.com/ReoKM/otaku_no_shiori/pull/20) / `src/lib/guest-store.ts` / `src/lib/guest-store.test.ts` / `src/types/shiori.ts` / `vitest.config.ts` / `package.json` / `package-lock.json`
+
+## 12:30 W1タスク#7 F1実装: しおり作成+一覧+詳細シェル(ゲスト保存)
+- Goal: S2でしおりを作成するとIndexedDBに保存され、S1の一覧に表示され、S3詳細シェル(タブ枠)に遷移できる状態のPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `origin/w1-integration`から`w1/task7-f1-shiori`ブランチを作成(依存: タスク#4/#5/#6のマージ済みdocs・guest-store基盤)
+  - ロジックを純粋関数として`src/lib`に切り出し、ユニットテスト付きで実装:
+    - `shiori-validation.ts`(S2バリデーション。タイトル必須30文字/日程必須+前後関係/遠征タイプ必須/目的任意50文字。文言はS2仕様の表と完全一致させた)
+    - `cover.ts`(`color:`/`emoji:`プレフィックスの生成・解釈・デフォルト値解決)
+    - `cover-presets.ts`(プリセット色8種・絵文字8種、tokens.md「6.」準拠)
+    - `trip-type.ts`(遠征タイプ4種の選択肢・ラベル)
+    - `format-date.ts`(S1カードの日程表示。開始=終了なら単一日付、それ以外は「〜」区切り)
+  - S1(`src/app/page.tsx`)を置き換え: ローディング(スケルトン2枚)/空状態(ランディング兼用EmptyState)/一覧(ShioriCard新しい順)/読込エラー(再読み込みボタン)/広告枠プレースホルダー(F9位置確保のみ)/FabButton(1件以上の時のみ)を実装
+  - S2(`src/app/shiori/new/page.tsx`+`src/components/shiori-form/*`)を実装: FieldTitle/FieldDateRange/FieldTripType/FieldPurpose/FieldCover(色/絵文字トグル+8プリセットスウォッチ)+送信バー。送信時にまとめてバリデーションし、エラーは該当項目直下に表示、先頭エラー項目へスクロール。成功時は`createShiori`でIndexedDB保存後`/shiori/[id]/packing`へ遷移
+  - S3シェル(`src/app/shiori/[id]/layout.tsx`+`src/components/shiori-detail/*`)を実装: ヘッダー(戻る+タイトル+日程、ローディング中はスケルトン)+5タブ(持ち物/TODO/旅程/スポット/ログ、`usePathname`ベースでアクティブ判定)+しおり未検出時のフォールバック(「このしおりは見つかりませんでした」+「一覧に戻る」)。ローディング中はタブバーを`opacity-50`+`pointer-events-none`でグレーアウト
+  - `/shiori/[id]/page.tsx`は`/shiori/[id]/packing`へredirect
+  - `/shiori/[id]/packing`・`/shiori/[id]/todo`はタスク#8・#9が置き換えやすいよう最小限のプレースホルダー文言のみ実装
+  - `/shiori/[id]/itinerary`・`/spots`・`/log`は共通`ComingSoon`コンポーネントで準備中表示
+  - `npm run lint && npm run typecheck && npm test && npm run build`が全部通ることを確認(lint 0件、tsc 0件、テスト42件全成功、本番ビルド成功)。開発サーバーを起動し`/`・`/shiori/new`・`/shiori/[id]/packing`・存在しないid・`/shiori/[id]/itinerary`のHTTPステータスを目視確認(200系)
+- できていないこと:
+  - Playwright等によるブラウザ自動操作での視覚確認(375px崩れ確認含む)は未実施。ブラウザバイナリが未キャッシュで新規ダウンロードが必要だったため、lint/tsc/test/buildの成功とTailwindクラスの手動レビュー(44px タップ領域・トークン名クラスの目視確認)による確認に留めた。W1はE2E環境構築がスコープ外(`docs/plans/2026-W28.md`タスク#11参照)のため、次のQAタスクでの手動確認を推奨
+  - しおりIDが変わらないままS3シェルがマウントされ続けるケース(通常のアプリ内遷移では発生しない)ではローディング状態への再遷移を省略している(React Compiler ESLintルール`set-state-in-effect`回避のための実装上の割り切り。下記仮置き参照)
+- 不明点・仮置き:
+  - S2仕様の「不明点・仮置き」欄(文字数上限30/50文字、カバー未選択時のデフォルト`cover-color-1`、色/絵文字トグル切替時の選択リセット)をそのまま踏襲した
+  - S3シェルのIndexedDB読込自体が失敗した場合(通常のnot-foundと別ケース)について、仕様書の状態表に専用の「読込エラー」表示が定義されていないため、既存の「しおりが見つかりません」表示にフォールバックする実装とした
+  - `react-hooks/set-state-in-effect`(ESLint)対応のため、S1再読み込みボタンとS3シェルのローディングリセットの実装を、初回マウント時の初期状態(`loading`)に依存する形に整理した。しおりIDが変わらず再マウントされない通常のアプリ内遷移では影響が無いことを確認済み
+- 成果物: PR #22 (https://github.com/ReoKM/otaku_no_shiori/pull/22) / `src/app/page.tsx` / `src/app/shiori/new/page.tsx` / `src/app/shiori/[id]/layout.tsx` / `src/app/shiori/[id]/page.tsx` / `src/app/shiori/[id]/packing/page.tsx` / `src/app/shiori/[id]/todo/page.tsx` / `src/app/shiori/[id]/itinerary/page.tsx` / `src/app/shiori/[id]/spots/page.tsx` / `src/app/shiori/[id]/log/page.tsx` / `src/components/shiori/*` / `src/components/shiori-form/*` / `src/components/shiori-detail/*` / `src/components/common/*` / `src/lib/shiori-validation.ts`(+test) / `src/lib/cover.ts`(+test) / `src/lib/cover-presets.ts` / `src/lib/trip-type.ts` / `src/lib/format-date.ts`(+test)
+
+## 03:40 W1タスク#8 F2実装: 持ち物リスト(テンプレ自動投入+ゲスト保存)
+- Goal: 遠征タイプ選択でテンプレアイテムが自動投入され、追加・編集・削除・並べ替え・チェックがIndexedDBに保存される状態のPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `git fetch origin w1-integration` → `w1/task8-f2-packing`ブランチを作成(タスク#5/#6/#7のマージ済みdocs・guest-store・S3シェルに依存)
+  - `src/templates/packing-templates.ts`を新設。遠征タイプ4種分のテンプレ定数(live/seichi は`docs/01_service_spec.md`のF2記載例そのまま、stage/otherは仮置き)
+  - `src/lib/packing-validation.ts`(ラベルのtrim()バリデーション、追加/編集共通)、`src/lib/packing-template-seed.ts`(投入済みフラグのlocalStorage管理+テンプレ投入ロジック`seedPackingTemplate`)を実装
+  - `src/components/packing/`配下にS3a仕様のコンポーネント構造どおり実装: `PackingTab`(状態管理・guest-store呼び出し)/`PackingToolbar`/`PackingRow`(通常・編集中・削除確認中を内包)/`PackingRowSortMode`/`EmptyPacking`/`PackingAddForm`/`PackingListSkeleton`
+  - `src/app/shiori/[id]/packing/page.tsx`のプレースホルダーを`PackingTab`呼び出しに置き換え
+  - 初回表示時「0件かつ投入済みフラグなし」なら自動投入、投入失敗時のみEmptyPacking表示にフォールバック(フラグは立てず次回再試行)。全削除後はフラグが立っているため自動再投入されず、EmptyPackingの「テンプレから追加」ボタンでのみ手動再投入
+  - 削除確定時は`reorderPackingItems`で残項目のsort_orderを詰め直し、並べ替えモードの上下矢印移動も同様に`reorderPackingItems`を呼ぶ
+  - ユニットテスト13件を追加(テンプレ定数の構造・S2文言との一致/バリデーションのtrim挙動/テンプレ投入ロジックのsort_order・投入済みフラグ)
+  - ESLint(`react-hooks/set-state-in-effect`)指摘に対応: `loadedForId`をshioriId単位で保持し、effect本体で同期的に`setLoading(true)`を呼ばない構造に変更(S3シェルの`ShioriDetailLayout`と同じパターン)
+  - 並べ替えモード中に削除で項目数が2件未満になっても「完了」ボタンを表示し続けるよう`PackingToolbar`の表示条件を調整(ユーザーが並べ替えモードから抜けられなくなることを防ぐため)
+  - `npm run lint && npm run typecheck && npm test`が全部通ることを確認(lint/typecheckはエラー無し、テスト62件全て成功)
+  - PRを作成(base: `w1-integration`)
+- できていないこと:
+  - 実機/ブラウザでのビジュアル確認(375px崩れ確認含む)は、開発サーバーを起動してのブラウザ自動操作までは実施していない。Tailwindクラス(44×44pxタップ領域・トークン名クラス)のコードレビューベースの確認に留めた
+- 不明点・仮置き:
+  - テンプレ投入済みフラグはguest-store.ts(IndexedDB)のスキーマを変更せず、`localStorage`キー(`packing-template-seeded:<shioriId>`)で管理する実装にした(S3a仕様書のアーキテクト確定仕様の実装方法として裁量に委ねられている部分)
+  - テンプレ内容のうち`stage`(舞台/観劇)・`other`(その他)は仕様書に例の記載が無いため仮置き: stage=チケット/オペラグラス/モバイルバッテリー/パンフレット代の現金/防寒具、other=モバイルバッテリー/現金/身分証/常備薬/折りたたみ傘
+  - 持ち物ラベルの文字数上限30文字はS2のタイトル上限に揃えた仮置き値(S3a仕様書内で既に「仮置き」と明記済み)。上限超過時の専用エラー文言は仕様書に定義が無いため`maxLength`属性でのみ制限した
+  - 並べ替えモード中に項目数が2件未満に減っても「完了」ボタンを表示し続ける挙動は、仕様書に明記の無い部分を仮置きで補った
+  - `vitest.config.ts`に`@/`エイリアスのresolve設定が無いため、新規追加した`src/lib/packing-template-seed.ts`とそのテストでは値としてimportする箇所のみ相対パスを使った(vitest.config.ts自体は変更していない)
+- 成果物: PR #23 (https://github.com/ReoKM/otaku_no_shiori/pull/23) / `src/app/shiori/[id]/packing/page.tsx` / `src/components/packing/*` / `src/templates/packing-templates.ts`(+test) / `src/lib/packing-validation.ts`(+test) / `src/lib/packing-template-seed.ts`(+test)

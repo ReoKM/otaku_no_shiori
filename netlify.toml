@@ -1,0 +1,22 @@
+# Netlifyデプロイ設定
+# 対応タスク: docs/plans/2026-W28.md タスク#10
+# 手順書: docs/deploy/netlify.md
+
+[build]
+  command = "npm run build"
+  # Netlify管理画面(UI)側のPublish directoryがリポジトリ直下になっており、
+  # Next.jsプラグインが「publish = base」を拒否してデプロイが失敗するため、
+  # コード側で明示的に上書きする(netlify.tomlの設定はUI設定より優先される)。
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16はNode.js 20.9以上が必須。CI(GitHub Actions)と同じNode 22に固定する。
+  NODE_VERSION = "22"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  # W2のF7(共有画像生成: satori + resvg)でネイティブバイナリを使うため、
+  # Netlify Functionsのバンドル時にNode_modulesとして外部化する。
+  external_node_modules = ["@resvg/resvg-js"]
