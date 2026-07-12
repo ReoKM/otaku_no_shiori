@@ -21,4 +21,4 @@
   - `itinerary_entries`のsort_orderは同一day_date内での連番とした(一覧がday_date→sort_order順のため)。仕様に明記は無いが、日ごとの並べ替えUI(タスク8で実装予定)と整合させるための実装判断
   - `spots`/`photos`の一覧の並び順(それぞれ作成日時降順)は仕様に明記が無いため、既存`listShiori`と同じパターンで仮置き
   - `shiori_spots`のkeyPathは複合キー(配列)を選択(クラウド側の複合PKと形状を合わせられ、UI側は`shiori_id`+`spot_id`の組で扱うだけで済むため単一idより実装が簡単と判断)
-- 成果物: PR #(下記参照。作業ログ作成時点でPR作成前のため、完了報告に確定番号を記載)
+- 成果物: PR #49(https://github.com/ReoKM/otaku_no_shiori/pull/49)
