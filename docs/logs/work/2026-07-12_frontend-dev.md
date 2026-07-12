@@ -1,0 +1,24 @@
+## 16:00 ゲスト保存基盤拡張(DB_VERSION 2: itinerary_entries/spots/shiori_spots/photos追加)
+- Goal: `src/lib/guest-store.ts`がDB_VERSION 2になり、itinerary_entries/spots/shiori_spots/photosの4ストア+CRUD+型定義+テストが揃い、既存データを壊さないことが検証済みのPRが1本出ている。
+- 結果: 達成
+- やったこと:
+  - `docs/plans/2026-W29.md`タスク#5とIssue #37(+レビューコメント。3ストア→4ストアへの更新指示)を確認
+  - `origin/w2-integration`から`w2/task5-guest-store-v2`ブランチを作成
+  - `src/types/shiori.ts`に`ItineraryEntry`/`Spot`(`SpotSource`/`SpotStatus`含む)/`ShioriSpot`/`Photo`型を追加(`supabase/migrations/0001_initial_schema.sql`の列名に合わせsnake_case厳守。`Photo`は`storage_path`の代わりに`blob`を持つ設計とし、移行時の変換方針をコメントに明記)
+  - `src/lib/guest-store.ts`のDB_VERSIONを2に上げ、upgradeコールバックに4ストア追加(`if (!db.objectStoreNames.contains(...))`パターンを踏襲、既存3ストアの初期化コードは変更せず維持)
+    - `itinerary_entries`(keyPath: id, index: by-shiori_id)
+    - `spots`(keyPath: id。UGCのみ格納、シードは同梱JSON参照でこのストアに入れない)
+    - `shiori_spots`(keyPath: `["shiori_id","spot_id"]`の複合キー。クラウド側の複合PKに合わせた。index: by-shiori_id)
+    - `photos`(keyPath: id, index: by-shiori_id。写真本体は`blob: Blob`で保持)
+  - 4ストア分のCRUD関数一式を追加(create/list/update/delete、itinerary_entriesのみ+reorder、photosのみ+countPhotosByShiori)。W1の既存パターン(packing_items/todos)に合わせた
+  - `deleteShiori`のカスケード削除対象に新規4ストアを追加。`shiori_spots`経由で紐づくUGCスポット本体(`spots`)もあわせて削除し孤立データを防止。シードスポットのspot_id(spotsストアに存在しない)への削除はno-opになることを確認
+  - ユニットテスト追加: 4ストアのCRUD・並び順・カスケード削除・シードspot_idを含む紐付けの安全な削除
+  - 新規テストファイル`src/lib/guest-store.migration.test.ts`: 生のindexedDB APIでversion 1のDBを構築 → guest-store.ts import(version 2へアップグレード) → 既存3ストアのデータが残ること・新規4ストアも使えることを1つのitブロックで検証(2つに分けるとモジュールのdbPromiseシングルトンが残り2回目のversion 1オープンがVersionErrorになるため統合)
+  - `npm run lint && npm run typecheck && npm test`が全て成功することを確認(108テスト全通過)
+- できていないこと: なし
+- 不明点・仮置き:
+  - `deleteShiori`時にUGCスポット本体(`spots`)も削除する設計とした。Issue本文・コメントは「新規4ストアをカスケード削除対象に追加」とのみ指定しており、スポット本体を消すか紐付けのみ消すかは明記が無かったため、現状UIにスポット再利用機能が無い(1しおり内で閉じたUGC入力)前提で「孤立データ防止のため本体も削除」を選んだ。将来スポットを複数しおりで共有する機能を追加する場合はこの削除ロジックの見直しが必要
+  - `itinerary_entries`のsort_orderは同一day_date内での連番とした(一覧がday_date→sort_order順のため)。仕様に明記は無いが、日ごとの並べ替えUI(タスク8で実装予定)と整合させるための実装判断
+  - `spots`/`photos`の一覧の並び順(それぞれ作成日時降順)は仕様に明記が無いため、既存`listShiori`と同じパターンで仮置き
+  - `shiori_spots`のkeyPathは複合キー(配列)を選択(クラウド側の複合PKと形状を合わせられ、UI側は`shiori_id`+`spot_id`の組で扱うだけで済むため単一idより実装が簡単と判断)
+- 成果物: PR #(下記参照。作業ログ作成時点でPR作成前のため、完了報告に確定番号を記載)
