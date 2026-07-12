@@ -27,4 +27,4 @@
   - 選択超過時の注意文言の自動消去時間は仕様が「具体的な秒数は定めず実装側の裁量」としているため5秒に仮置き
   - 編集モード(`LogPhotoCardEditing`)は375px・3列グリッドでは入力欄が収まらないため、そのカードのみ`col-span-3`でグリッド全幅を使う実装とした(画像自体は仕様どおり拡大しない)。仕様に編集時のグリッド占有についての明記は無いための実装判断
   - react-hooks/purityルール対応のための実装上の回避策(Date.now呼び出し位置の変更、useObjectUrlのuseMemo化)はロジック自体は変えていない
-- 成果物: PR(`w2/task10-f6-photolog` → `w2-integration`。番号はPR作成後に追記)
+- 成果物: PR #55(`w2/task10-f6-photolog` → `w2-integration`)
