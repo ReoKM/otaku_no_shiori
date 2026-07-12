@@ -1,0 +1,25 @@
+## 22:30 W2 QA検出バグ3件の修正(Issue #60/#62/#63)
+
+- Goal: Issue #60/#62/#63が修正され、再現手順で直っていることを確認済みのPRが1本出ている
+- 結果: 達成
+- やったこと:
+  - `origin/w2-integration`から`w2/fix-qa-issues-60-62-63`ブランチを作成
+  - Issue #60: `src/templates/share-image/render.ts`の`STATIC_TEMPLATE_TEXT`に省略記号(U+2026 `…`)を追加。`collectRenderText`を純粋関数としてexportしユニットテスト3件を追加(`render.test.ts`)
+  - Issue #60検証: `renderShareImageToSvg`+`@resvg/resvg-js`で実際にPNGを生成し(netlify-cli devはサンドボックスでEdge Functions取得403のため使用不可、`functions:serve`もnetlify-cli未インストールのため直接satori/resvgを呼ぶ検証スクリプトで代替)、修正前(「…」未収録)は`https://otaku-no-shiori.netli`+tofu(notdef)グリフで途切れ、修正後は`https://otaku-no-shiori.netli…`と正しく省略されることをフッター領域の切り出し画像で目視確認した
+  - Issue #62: `src/components/log/useObjectUrl.ts`をBlobキーの参照カウント方式(`createObjectUrlRegistry`)に書き換え。React Strict Modeのeffect二重発火(setup→cleanup→setup)で、cleanup直後の再setupが新しいURLを作り直すようにし、revoke済みURLが表示され続める不具合を解消。参照カウントロジック単体のユニットテスト6件を追加(`useObjectUrl.test.ts`、Strict Mode相当のacquire→release→acquireシナリオを含む)
+  - Issue #62検証: Playwright(グローバルインストール済みのものを一時利用、コミットには含めない)で「写真追加→編集モード→サムネイル確認→削除確認モードも確認」を実施。修正前は編集モード・削除確認モードで`naturalWidth=0`+`net::ERR_FILE_NOT_FOUND`を確認(バグ再現)、修正後は全モードで`naturalWidth=1`(正常)を確認
+  - Issue #63: 追加したitinerary entryのidを`SpotSection`→`ItineraryTab`→`ItinerarySection`→`DayBlock`→`EntryRow`へ受け渡し、該当行に`bg-pink-100`背景と`scrollIntoView({behavior:"smooth",block:"center"})`を実装。ハイライトは編集・削除開始・並べ替えモード切替・予定追加フォームを開くなど「次の操作」で解除されるようにした
+  - Issue #63検証: Playwrightで1日目に予定8件を追加してページを長くした状態を作り、3日目に「本命スポット」を旅程追加。修正前は`scrollY`が0のまま・行が非表示(top=1110px、ビューポート外)・強調背景なしを確認(バグ再現)、修正後は`scrollY`が0→431に変化・行がビューポート内(top=679px)・`bg-pink-100`背景ありを確認
+  - `npm run lint && npm run typecheck && npm test`が全て通ることを確認(29ファイル・295テスト成功)
+  - 検証用の一時スクリプト(`verify-issue-60/62/63`)は確認後に削除し、コミットに含めていない
+- できていないこと:
+  - Issue #61(オフライン対応)はW3スコープのため対象外(指示通り)
+  - `netlify-cli functions:serve`を使った公式の確認手順(Issue #60本文記載の手順)そのものは実行できていない。netlify-cli未インストール・オフライン制約があるサンドボックス環境のため、同等のsatori+resvg直接呼び出しで代替検証した
+  - Issue #63の「次の操作」でハイライトを解除する範囲は仕様に厳密な定義が無く、タスク指示の「次の操作まで」を編集・削除開始・並べ替え切替・予定追加フォームを開く操作と解釈して実装した(仮置き)
+- 不明点・仮置き:
+  - Issue #63のハイライト解除トリガーの具体的な操作範囲(上記)。S3c仕様には「一時的に強調」としか書かれておらず、タスク指示の「次の操作まで」に沿って実装したが、範囲の妥当性はレビューで確認してほしい
+- 成果物:
+  - PR: (本文参照。base=`w2-integration`)
+  - `src/templates/share-image/render.ts`, `src/templates/share-image/render.test.ts`
+  - `src/components/log/useObjectUrl.ts`, `src/components/log/useObjectUrl.test.ts`
+  - `src/components/itinerary/ItineraryTab.tsx`, `ItinerarySection.tsx`, `DayBlock.tsx`, `EntryRow.tsx`, `SpotSection.tsx`

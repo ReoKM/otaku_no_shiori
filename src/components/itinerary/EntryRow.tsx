@@ -1,8 +1,11 @@
+"use client";
+
 /**
  * S3c EntryRow(通常モード/編集中/削除確認中の1行)。
  * 参照: docs/design/screens/S3c_旅程スポット.md
  * 「EntryRow(通常モード、1行)」「EntryRow(編集中)」「EntryRow(削除確認中)」
  */
+import { useEffect, useRef } from "react";
 import { buildGoogleMapsSearchUrl } from "@/lib/googleMapsUrl";
 import type { ItineraryDayInfo } from "@/lib/itinerary-days";
 import {
@@ -19,6 +22,13 @@ interface EntryRowProps {
   mode: EntryRowMode;
   onStartEdit: () => void;
   onStartDelete: () => void;
+
+  /**
+   * Issue #63: 「旅程に追加」直後の強調表示対象かどうか。
+   * trueの間、背景`color-primary-soft`(`bg-pink-100`)で一時的に強調し、
+   * 表示された位置までスクロールする(S3c仕様「旅程に追加 完了直後」)。
+   */
+  highlighted?: boolean;
 
   /** 日付変更プルダウンの選択肢。日程null(フォールバック中)の場合は`null`でプルダウン非表示。 */
   dayOptions: ItineraryDayInfo[] | null;
@@ -47,6 +57,7 @@ export function EntryRow({
   mode,
   onStartEdit,
   onStartDelete,
+  highlighted = false,
   dayOptions,
   editTime,
   editTitle,
@@ -65,6 +76,15 @@ export function EntryRow({
   onConfirmDelete,
   onCancelDelete,
 }: EntryRowProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // Issue #63: 強調表示対象になったタイミングで、この行の位置までスクロールする。
+  useEffect(() => {
+    if (highlighted) {
+      rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlighted]);
+
   if (mode === "edit") {
     return (
       <div className="flex flex-col gap-2 border-b border-neutral-200 px-4 py-3">
@@ -162,7 +182,12 @@ export function EntryRow({
   }
 
   return (
-    <div className="flex flex-col gap-1 border-b border-neutral-200 px-4 py-3">
+    <div
+      ref={rowRef}
+      className={`flex flex-col gap-1 border-b border-neutral-200 px-4 py-3 ${
+        highlighted ? "bg-pink-100" : ""
+      }`}
+    >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">

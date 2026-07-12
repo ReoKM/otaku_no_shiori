@@ -15,7 +15,7 @@
  */
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { renderShareImageToSvg } from "./render";
+import { collectRenderText, renderShareImageToSvg } from "./render";
 import { NigiyakaTemplate } from "./nigiyaka";
 import { SimpleTemplate } from "./simple";
 import { DEFAULT_SERVICE_NAME, DEFAULT_SERVICE_URL, type ShareImageProps } from "./types";
@@ -173,6 +173,33 @@ describe.each(TEMPLATES)("%sテンプレート(Reactエレメント構造)", (_t
     const srcs = collectPhotoUrls(Template({ ...BASE_PROPS, photos }));
     expect(srcs).toHaveLength(3);
     expect(srcs).toEqual([`${DUMMY_PHOTO_DATA_URL}#1`, `${DUMMY_PHOTO_DATA_URL}#2`, `${DUMMY_PHOTO_DATA_URL}#3`]);
+  });
+});
+
+describe("collectRenderText(フォントサブセット取得用の文字収集・Issue #60再発防止)", () => {
+  it("serviceName/serviceUrl省略時、デフォルト値(DEFAULT_SERVICE_NAME/DEFAULT_SERVICE_URL)の文字を含む", () => {
+    const text = collectRenderText({ ...BASE_PROPS, serviceName: undefined, serviceUrl: undefined });
+    for (const ch of DEFAULT_SERVICE_NAME) {
+      expect(text).toContain(ch);
+    }
+    for (const ch of DEFAULT_SERVICE_URL) {
+      expect(text).toContain(ch);
+    }
+  });
+
+  it("省略記号(U+2026 '…')を含む(LogoUrlBarのtextOverflow: ellipsisで実際に描画されうる文字)", () => {
+    const text = collectRenderText(BASE_PROPS);
+    expect(text).toContain("…");
+  });
+
+  it("serviceName/serviceUrlをPropsで上書きした場合、その文字を含む", () => {
+    const text = collectRenderText({
+      ...BASE_PROPS,
+      serviceName: "テスト表示名",
+      serviceUrl: "https://example.com/?via=share",
+    });
+    expect(text).toContain("テスト表示名");
+    expect(text).toContain("https://example.com/?via=share");
   });
 });
 
