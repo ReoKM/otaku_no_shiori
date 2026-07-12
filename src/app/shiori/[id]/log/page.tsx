@@ -1,6 +1,13 @@
-import { ComingSoon } from "@/components/shiori-detail/ComingSoon";
+"use client";
 
-/** ログタブ(W1では準備中表示のみ)。参照: docs/design/screens/S3_しおり詳細.md */
+import { useParams } from "next/navigation";
+import { LogTab } from "@/components/log/LogTab";
+
+/**
+ * S3d ログタブ。
+ * 参照: docs/design/screens/S3d_ログ.md
+ */
 export default function LogPage() {
-  return <ComingSoon feature="ログ" />;
+  const params = useParams<{ id: string }>();
+  return <LogTab shioriId={params.id} />;
 }
