@@ -72,6 +72,13 @@ export default function ShioriDetailLayout({ children }: { children: React.React
   const activeTab = resolveActiveTab(pathname, shioriId);
   const dateRange = shiori ? formatDateRange(shiori.start_date, shiori.end_date) : null;
 
+  // S4(スポット検索 `/shiori/[id]/spots/...`)は独自のヘッダー・戻る導線を持つ
+  // 専用画面のため、このレイアウトのタブシェル(ヘッダー+タブバー)を適用しない。
+  // 参照: docs/design/screens/S4_スポット検索.md「レイアウト」(一覧画面ヘッダー/詳細画面ヘッダー)
+  if (pathname.startsWith(`/shiori/${shioriId}/spots`)) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
       <ShioriDetailHeader
