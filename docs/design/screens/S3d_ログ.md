@@ -8,7 +8,7 @@
 
 - 写真本体はIndexedDBの`photos`ストアにBlobとして保存する(ログイン移行時にSupabase Storageへアップロードする設計は`docs/03_tech_stack.md`参照。本画面仕様はゲスト保存前提の表示・操作のみを扱う)
 - 1件のログは次の情報を持つ: 写真Blob(必須)/ `day_date`(任意、日付)/ `caption`(任意、ひとことメモ、文字数上限50文字・仮置き。`S2_しおり作成.md`の「目的」欄と同水準で揃えた)
-- 写真は**アップロード前にクライアント側(Canvas)で長辺1600pxにリサイズ**してから保存する(`docs/01_service_spec.md` F6 / `docs/03_tech_stack.md`)
+- 写真は**アップロード前にクライアント側(Canvas)で、長辺が1600pxを超える場合のみアスペクト比を維持して長辺1600pxに縮小**してから保存する(1600px以下はリサイズしない=拡大による画質劣化・サイズ増を避ける。`docs/01_service_spec.md` F6 / `docs/03_tech_stack.md`)
 - 1しおりあたりの上限は**20枚**(F6仕様の既定値)。上限値そのものは環境変数でのみ変更可能でユーザー設定にはしない(本画面仕様では表示文言の中で数値を扱うが、実際の表示数値は実装側の設定値を参照すること。以下の文言例は既定値20を用いる)
 
 ## レイアウト(上から順、タブシェル内のコンテンツ領域)
@@ -39,16 +39,16 @@
     {photos.length === 0
       ? <EmptyLog onAddPhoto />
       : groupedByDayAsc.map(group => (
-          <LogDateGroup label={group.label}>
+          <LogDateGroup key={group.label} label={group.label}>
             <LogPhotoGrid>
               {group.items.map(item =>
                 item.status === "processing"
-                  ? <LogPhotoCardProcessing />
+                  ? <LogPhotoCardProcessing key={item.id} />
                   : item.mode === "editing"
-                    ? <LogPhotoCardEditing item={item} onSave onCancel />
+                    ? <LogPhotoCardEditing key={item.id} item={item} onSave onCancel />
                     : item.mode === "confirming-delete"
-                      ? <LogPhotoCardConfirmDelete item={item} onDelete onCancel />
-                      : <LogPhotoCard item={item} onTapEdit onTapDelete />
+                      ? <LogPhotoCardConfirmDelete key={item.id} item={item} onDelete onCancel />
+                      : <LogPhotoCard key={item.id} item={item} onTapEdit onTapDelete />
               )}
             </LogPhotoGrid>
           </LogDateGroup>
@@ -114,7 +114,7 @@
 | 一覧あり(通常) | 「並び順」の規則で`LogDateGroup`+`LogPhotoGrid`を表示 |
 | アップロード中(クライアントリサイズ処理中) | 選択した写真の枚数分、「日付未設定」グループの末尾に`LogPhotoCardProcessing`を即時追加表示する(処理完了を待たずに「これから追加される」ことを可視化する)。複数枚同時選択時は1枚ずつ処理が完了次第、順次通常カードに置き換わる |
 | 上限到達(現在枚数=上限枚数) | Toolbarの「写真を追加」ボタンが非活性表示になる。EmptyLogは表示されない(1枚以上ある前提のため) |
-| 選択超過(残り枠より多くのファイルを選択した) | 残り枠数分のみ処理を続行し、超過分は取り込まない。リストエリア上部に一時的な注意文言(`text-body-sm` / `color-error`)を表示: 「上限のため◯枚のみ追加しました(残り枠: {残り枚数}枚)」。数秒後またはユーザーの次操作で自動的に消えてよい(モーダルは使わない) |
+| 選択超過(残り枠より多くのファイルを選択した) | 残り枠数分のみ処理を続行し、超過分は取り込まない。リストエリア上部に一時的な注意文言(`text-body-sm` / `color-error`)を表示: 「上限(20枚)に達したため◯枚のみ追加しました」。数秒後またはユーザーの次操作で自動的に消えてよい(モーダルは使わない) |
 | 個別写真の読込・リサイズ失敗 | 該当の`LogPhotoCardProcessing`が「読み込みに失敗しました」(`color-error`、`text-caption`)+×(取り消し)アイコンのカードに置き換わる。タップで一覧から取り除ける(保存済みデータは無いため削除確認は不要) |
 | 写真編集中 | 該当カードのみ`LogPhotoCardEditing`表示。他のカードは通常表示のまま |
 | 写真削除確認中 | 該当カードのみ`LogPhotoCardConfirmDelete`表示。他のカードは通常表示のまま |
@@ -126,7 +126,7 @@
 | 要素 | 挙動 |
 |------|------|
 | Toolbarの「写真を追加」ボタン | ネイティブファイル選択(`accept="image/*" multiple`)を開く。上限到達時は非活性のためタップしても何も起きない |
-| ファイル選択後 | 選択された各ファイルについて、残り枠の範囲内でクライアント側リサイズ(長辺1600px)を実行し、完了したものから`day_date: null` / `caption: null`で`photos`ストアに保存し「日付未設定」グループに追加する |
+| ファイル選択後 | 選択された各ファイルについて、残り枠の範囲内でクライアント側リサイズを実行し、`day_date: null` / `caption: null`で`photos`ストアに保存し「日付未設定」グループに追加する。**リサイズは非同期で完了順が前後するため、選択時点で並び順(仮のcreated_at or インデックス)を割り当ててから処理を開始し、画面上の並びがユーザーの選択順と一致するようにする** |
 | EmptyLogの「写真を追加」ボタン | Toolbarの「写真を追加」ボタンと同じ挙動 |
 | LogPhotoCard(画像+キャプション部分)タップ | そのカードを編集モードにする |
 | LogPhotoCardの削除(ゴミ箱)アイコンタップ | そのカードを削除確認モードにする |
@@ -151,7 +151,7 @@
 | キャプション未設定時のカード表示 | メモを追加 |
 | アップロード中の表示 | 処理中… |
 | 読込・リサイズ失敗の表示 | 読み込みに失敗しました |
-| 選択超過時の注意文言 | 上限のため◯枚のみ追加しました(残り枠: {残り枚数}枚) |
+| 選択超過時の注意文言 | 上限(20枚)に達したため◯枚のみ追加しました |
 | 削除確認の文言 | 本当に削除しますか？ |
 | 削除確認の削除ボタン | 削除 |
 | 削除確認のキャンセルボタン | キャンセル |
