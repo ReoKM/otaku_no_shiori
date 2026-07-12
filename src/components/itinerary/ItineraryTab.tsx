@@ -6,18 +6,28 @@ import { buildItineraryDayList, type ItineraryDayInfo } from "@/lib/itinerary-da
 import { ItinerarySection } from "./ItinerarySection";
 import { ItinerarySkeleton } from "./ItinerarySkeleton";
 import { SegmentedControl, type ItinerarySegment } from "./SegmentedControl";
-import { SpotsPlaceholder } from "./SpotsPlaceholder";
+import { SpotSection } from "./SpotSection";
 
 /**
  * S3c ItineraryTab(旅程タブ本体)。
  * 参照: docs/design/screens/S3c_旅程スポット.md
  *
- * 「旅程」/「行きたい場所」のセグメント切替の器を提供する。本タスク(F4/W2タスク#8)では
- * 「旅程」セクション(ItinerarySection)のみを実装し、「行きたい場所」はタスク#9が
- * 置き換えるプレースホルダー(SpotsPlaceholder)に留める。
+ * 「旅程」/「行きたい場所」のセグメント切替の器。
+ * S4(スポット検索)からの「戻る」・「しおりに戻って自由に追加する」導線は
+ * クエリパラメータ(`section=spots`/`openFreeForm=1`)で遷移してくるため、
+ * `initialSection`/`initialOpenFreeForm`(`src/app/shiori/[id]/itinerary/page.tsx`が
+ * searchParamsから渡す)を初期状態に反映する。
  */
-export function ItineraryTab({ shioriId }: { shioriId: string }) {
-  const [section, setSection] = useState<ItinerarySegment>("itinerary");
+export function ItineraryTab({
+  shioriId,
+  initialSection = "itinerary",
+  initialOpenFreeForm = false,
+}: {
+  shioriId: string;
+  initialSection?: ItinerarySegment;
+  initialOpenFreeForm?: boolean;
+}) {
+  const [section, setSection] = useState<ItinerarySegment>(initialSection);
   const [dayList, setDayList] = useState<ItineraryDayInfo[] | null | undefined>(undefined);
 
   useEffect(() => {
@@ -43,7 +53,12 @@ export function ItineraryTab({ shioriId }: { shioriId: string }) {
           <ItinerarySection shioriId={shioriId} dayList={dayList} />
         )
       ) : (
-        <SpotsPlaceholder />
+        <SpotSection
+          shioriId={shioriId}
+          dayList={dayList ?? null}
+          openFreeFormInitial={initialOpenFreeForm}
+          onAddedToItinerary={() => setSection("itinerary")}
+        />
       )}
     </div>
   );
