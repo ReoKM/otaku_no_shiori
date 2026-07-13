@@ -54,6 +54,19 @@ async function handler(request: Request): Promise<Response> {
     return jsonErrorResponse(400, "Content-Typeはapplication/jsonである必要があります");
   }
 
+  // ボディをメモリへ読み込む前にContent-Lengthでサイズ超過を弾く(巨大ボディによるOOM対策)。
+  // ヘッダーは偽装できるため、読み込み後の実サイズ検証も従来どおり行う(二段構え)。
+  const contentLength = request.headers.get("content-length");
+  if (contentLength) {
+    const declaredBytes = Number.parseInt(contentLength, 10);
+    if (Number.isFinite(declaredBytes)) {
+      const declaredSizeErrors = validatePayloadSize(declaredBytes);
+      if (declaredSizeErrors.payload) {
+        return jsonErrorResponse(400, "入力値が不正です", declaredSizeErrors);
+      }
+    }
+  }
+
   let rawBody: string;
   try {
     rawBody = await request.text();
