@@ -103,8 +103,27 @@ export function isSupportedPhotoDataUrl(dataUrl: string): boolean {
 }
 
 /**
+ * ArrayBufferをbase64文字列へ変換する。
+ * `Buffer`はNode.jsのグローバルでブラウザには存在しないため、ブラウザでは
+ * `btoa`+チャンク分割(`String.fromCharCode`の引数上限・速度対策)で変換する。
+ * Node環境(vitest)では`Buffer`を使う。
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(buffer).toString("base64");
+  }
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+/**
  * 写真Blob(IndexedDB `photos`ストア由来、常にクライアント側リサイズ済み)をdata URLへ変換する。
- * `FileReader`はNode環境(vitest)に無いため使わず、`Blob.arrayBuffer`+`Buffer`で変換する
+ * `FileReader`はNode環境(vitest)に無いため使わず、`Blob.arrayBuffer`+base64変換で行う
  * (ブラウザ・Node両方で動作しユニットテスト可能にするため)。
  * 許可外のMIMEタイプ(Netlify Function側の検証と同じ範囲)の場合は`null`を返す。
  */
@@ -114,8 +133,7 @@ export async function blobToDataUrl(blob: Blob): Promise<string | null> {
     return null;
   }
   const buffer = await blob.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString("base64");
-  return `data:${mime};base64,${base64}`;
+  return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
 }
 
 export interface BuildShareImagePropsInput {

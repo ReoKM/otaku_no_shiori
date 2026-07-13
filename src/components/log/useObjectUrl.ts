@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * `URL.createObjectURL`/`revokeObjectURL`を注入可能にするためのインターフェース。
@@ -69,25 +69,20 @@ const browserObjectUrlRegistry = createObjectUrlRegistry({
  * 写真Blob(IndexedDB `photos`ストア由来)をObjectURL化する。
  * `Photo.blob`は常に存在する(Blob型・nullable無し)ため、このフックも非nullのBlobのみ扱う。
  *
- * 初回描画から画像を表示できるよう、URLの取得自体は`useState`の初期化関数で同期的に行う。
- * `useEffect`はマウント直後の1回目(useStateの初期化と対になる)は何もせず、
- * それ以降にeffectが再実行された場合(Blobが変わった場合、またはStrict Modeでの
- * 二重発火によるcleanup直後の再実行)にのみURLを取り直す。これにより、cleanupで
- * revokeされたURLがそのまま表示され続けることを防ぐ(Issue #62)。
+ * URLの取得はマウント後の`useEffect`内でのみ行う(レンダー中に副作用を持たない)。
+ * - レンダー中に`URL.createObjectURL`を呼ぶと、Strict Modeで破棄されるレンダー分の
+ *   参照カウントがreleaseされずリークする・SSR/ハイドレーション不一致の火種になるため
+ * - effectのcleanupでreleaseし、Strict Modeの二重発火(acquire→release→acquire)は
+ *   参照カウントレジストリ側がrevoke後の再生成で吸収する(Issue #62)
+ * 初回レンダーは空文字を返す(画像は次のコミットで表示される)。
  * ブラウザ専用API(`URL.createObjectURL`)に依存するため、Node環境のvitestではテスト対象外。
  * 参照カウントロジック自体(`createObjectUrlRegistry`)は`useObjectUrl.test.ts`でテストする。
  */
 export function useObjectUrl(blob: Blob): string {
-  const [url, setUrl] = useState(() => browserObjectUrlRegistry.acquire(blob));
-  const hasRunEffectRef = useRef(false);
+  const [url, setUrl] = useState("");
 
   useEffect(() => {
-    if (!hasRunEffectRef.current) {
-      // useStateの初期化で既に1回acquire済みのため、mount直後の1回目は再取得しない
-      hasRunEffectRef.current = true;
-    } else {
-      setUrl(browserObjectUrlRegistry.acquire(blob));
-    }
+    setUrl(browserObjectUrlRegistry.acquire(blob));
     return () => {
       browserObjectUrlRegistry.release(blob);
     };
