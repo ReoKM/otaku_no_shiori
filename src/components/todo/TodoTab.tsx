@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createTodo, deleteTodo, listTodosByShiori, reorderTodos, updateTodo } from "@/lib/guest-store";
-import { canMoveDown, canMoveUp, isDueToday, moveTodoInGroup, sortTodos, todayYmd } from "@/lib/todo-sort";
+import { isDueToday, sortTodos, todayYmd, todoGroupKey } from "@/lib/todo-sort";
 import { isTodoTemplateSeeded, markTodoTemplateSeeded } from "@/lib/todo-template-seed";
+import { useDragSort } from "@/lib/use-drag-sort";
 import { validateTodoLabel } from "@/lib/todo-validation";
 import { seedTodoTemplate } from "@/templates/todo-templates";
 import type { Todo } from "@/types/shiori";
@@ -137,15 +138,24 @@ export function TodoTab({ shioriId }: { shioriId: string }) {
     setSortMode((v) => !v);
   }
 
-  async function handleMove(index: number, direction: "up" | "down") {
-    const moved = moveTodoInGroup(sortedTodos, index, direction);
-    if (!moved) {
-      return;
-    }
-    const resequenced = moved.map((t, i) => ({ ...t, sort_order: i }));
+  async function handleDrop(newOrder: string[]) {
+    const byId = new Map(sortedTodos.map((t) => [t.id, t]));
+    const resequenced = newOrder
+      .map((id) => byId.get(id))
+      .filter((t): t is Todo => !!t)
+      .map((t, i) => ({ ...t, sort_order: i }));
     await reorderTodos(shioriId, resequenced.map((t) => t.id));
     setTodos(resequenced);
   }
+
+  const dragSort = useDragSort({
+    ids: sortedTodos.map((t) => t.id),
+    groupKeyOf: (id) => {
+      const todo = sortedTodos.find((t) => t.id === id);
+      return todo ? todoGroupKey(todo) : "";
+    },
+    onDrop: handleDrop,
+  });
 
   async function handleAdd(label: string, dueDate: string | null) {
     const created = await createTodo({ shiori_id: shioriId, label, due_date: dueDate });
@@ -173,45 +183,48 @@ export function TodoTab({ shioriId }: { shioriId: string }) {
       <div className="flex-1 divide-y divide-neutral-200">
         {sortedTodos.length === 0 ? (
           <EmptyTodo onAddFromTemplate={handleAddFromTemplate} />
-        ) : (
-          sortedTodos.map((item, index) =>
-            sortMode ? (
+        ) : sortMode ? (
+          dragSort.order.map((id) => {
+            const item = sortedTodos.find((t) => t.id === id);
+            if (!item) {
+              return null;
+            }
+            return (
               <TodoRowSortMode
                 key={item.id}
                 item={item}
-                canMoveUp={canMoveUp(sortedTodos, index)}
-                canMoveDown={canMoveDown(sortedTodos, index)}
-                onMoveUp={() => handleMove(index, "up")}
-                onMoveDown={() => handleMove(index, "down")}
+                isDragging={dragSort.draggingId === item.id}
+                registerRow={dragSort.registerRow(item.id)}
+                onHandlePointerDown={dragSort.onHandlePointerDown(item.id)}
               />
-            ) : (
-              <TodoRow
-                key={item.id}
-                item={item}
-                mode={editDraft?.id === item.id ? "edit" : deletingId === item.id ? "delete" : "view"}
-                dueToday={!item.is_done && isDueToday(item.due_date, today)}
-                onToggleDone={() => handleToggleDone(item)}
-                onStartEdit={() => handleStartEdit(item)}
-                onStartDelete={() => handleStartDelete(item)}
-                editLabel={editDraft?.id === item.id ? editDraft.label : ""}
-                editDueDate={editDraft?.id === item.id ? editDraft.dueDate : ""}
-                editError={editDraft?.id === item.id ? editDraft.error : null}
-                onEditLabelChange={(value) =>
-                  setEditDraft((prev) => (prev ? { ...prev, label: value, error: null } : prev))
-                }
-                onEditDueDateChange={(value) =>
-                  setEditDraft((prev) => (prev ? { ...prev, dueDate: value } : prev))
-                }
-                onClearEditDueDate={() =>
-                  setEditDraft((prev) => (prev ? { ...prev, dueDate: "" } : prev))
-                }
-                onSaveEdit={handleSaveEdit}
-                onCancelEdit={handleCancelEdit}
-                onConfirmDelete={() => handleConfirmDelete(item.id)}
-                onCancelDelete={handleCancelDelete}
-              />
-            ),
-          )
+            );
+          })
+        ) : (
+          sortedTodos.map((item) => (
+            <TodoRow
+              key={item.id}
+              item={item}
+              mode={editDraft?.id === item.id ? "edit" : deletingId === item.id ? "delete" : "view"}
+              dueToday={!item.is_done && isDueToday(item.due_date, today)}
+              onToggleDone={() => handleToggleDone(item)}
+              onStartEdit={() => handleStartEdit(item)}
+              onStartDelete={() => handleStartDelete(item)}
+              editLabel={editDraft?.id === item.id ? editDraft.label : ""}
+              editDueDate={editDraft?.id === item.id ? editDraft.dueDate : ""}
+              editError={editDraft?.id === item.id ? editDraft.error : null}
+              onEditLabelChange={(value) =>
+                setEditDraft((prev) => (prev ? { ...prev, label: value, error: null } : prev))
+              }
+              onEditDueDateChange={(value) =>
+                setEditDraft((prev) => (prev ? { ...prev, dueDate: value } : prev))
+              }
+              onClearEditDueDate={() => setEditDraft((prev) => (prev ? { ...prev, dueDate: "" } : prev))}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
+              onConfirmDelete={() => handleConfirmDelete(item.id)}
+              onCancelDelete={handleCancelDelete}
+            />
+          ))
         )}
       </div>
       <AddForm onAdd={handleAdd} />

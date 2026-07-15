@@ -14,6 +14,7 @@ import {
   isPackingTemplateSeeded,
   seedPackingTemplate,
 } from "@/lib/packing-template-seed";
+import { useDragSort } from "@/lib/use-drag-sort";
 import type { PackingItem, TripType } from "@/types/shiori";
 import { PackingToolbar } from "./PackingToolbar";
 import { PackingRow } from "./PackingRow";
@@ -112,33 +113,17 @@ export function PackingTab({ shioriId }: PackingTabProps) {
     await refresh();
   }
 
-  async function handleMoveUp(id: string) {
-    const index = items.findIndex((item) => item.id === id);
-    if (index <= 0) {
-      return;
-    }
-    const reordered = [...items];
-    [reordered[index - 1], reordered[index]] = [reordered[index], reordered[index - 1]];
+  async function handleDrop(newOrder: string[]) {
+    const byId = new Map(items.map((item) => [item.id, item]));
+    const reordered = newOrder.map((id) => byId.get(id)).filter((item): item is PackingItem => !!item);
     setItems(reordered);
-    await reorderPackingItems(
-      shioriId,
-      reordered.map((item) => item.id),
-    );
+    await reorderPackingItems(shioriId, newOrder);
   }
 
-  async function handleMoveDown(id: string) {
-    const index = items.findIndex((item) => item.id === id);
-    if (index === -1 || index >= items.length - 1) {
-      return;
-    }
-    const reordered = [...items];
-    [reordered[index], reordered[index + 1]] = [reordered[index + 1], reordered[index]];
-    setItems(reordered);
-    await reorderPackingItems(
-      shioriId,
-      reordered.map((item) => item.id),
-    );
-  }
+  const dragSort = useDragSort({
+    ids: items.map((item) => item.id),
+    onDrop: handleDrop,
+  });
 
   async function handleAddFromTemplate() {
     const created = await seedPackingTemplate(shioriId, tripType);
@@ -171,27 +156,32 @@ export function PackingTab({ shioriId }: PackingTabProps) {
       <div className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <EmptyPacking onAddFromTemplate={handleAddFromTemplate} />
-        ) : (
-          items.map((item, index) =>
-            sortMode ? (
+        ) : sortMode ? (
+          dragSort.order.map((id) => {
+            const item = items.find((i) => i.id === id);
+            if (!item) {
+              return null;
+            }
+            return (
               <PackingRowSortMode
                 key={item.id}
                 item={item}
-                isFirst={index === 0}
-                isLast={index === items.length - 1}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
+                isDragging={dragSort.draggingId === item.id}
+                registerRow={dragSort.registerRow(item.id)}
+                onHandlePointerDown={dragSort.onHandlePointerDown(item.id)}
               />
-            ) : (
-              <PackingRow
-                key={item.id}
-                item={item}
-                onToggleCheck={handleToggleCheck}
-                onSaveLabel={handleSaveLabel}
-                onDelete={handleDelete}
-              />
-            ),
-          )
+            );
+          })
+        ) : (
+          items.map((item) => (
+            <PackingRow
+              key={item.id}
+              item={item}
+              onToggleCheck={handleToggleCheck}
+              onSaveLabel={handleSaveLabel}
+              onDelete={handleDelete}
+            />
+          ))
         )}
       </div>
       <PackingAddForm

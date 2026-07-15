@@ -31,7 +31,7 @@
       ? <EmptyPacking onAddFromTemplate />
       : items.map(item => (
           sortMode
-            ? <PackingRowSortMode item={item} onMoveUp onMoveDown />
+            ? <PackingRowSortMode item={item} isDragging registerRow onHandlePointerDown />
             : <PackingRow item={item} onToggleCheck onEdit onDelete />
         ))}
   </List>
@@ -60,9 +60,10 @@
 
 ### PackingRowSortMode(並べ替えモード、1行)
 
-1. 上矢印ボタン(44×44px)。先頭の項目は無効化(`color-text-disabled`表示、タップ不可)
-2. 下矢印ボタン(44×44px)。末尾の項目は無効化
-3. ラベル(タップ操作不可、表示のみ、`color-text-primary`)
+1. ラベル(タップ操作不可、表示のみ、`color-text-primary`)
+2. 行右端にドラッグハンドル(≡アイコン、44×44pxタップ領域、`aria-label="ドラッグして並べ替え"`)
+
+ハンドルを約300ms長押し→そのままドラッグすると並べ替えできる(上下矢印ボタンは廃止。オーナーフィードバック反映)。ドラッグ中の行は影+半透明で強調し、他の行はドラッグ位置に応じてリアルタイムに並び直ることで挿入位置がわかるようにする。並べ替えモード中の行は`touch-action: none`にし、縦スクロールとの誤操作競合を防ぐ。指を離した時点の並びを`sort_order`として保存する。
 
 チェックボックス・編集・削除は並べ替えモード中は非表示にする(誤操作防止)。
 
@@ -106,8 +107,7 @@
 | 削除確認中の「キャンセル」 | 通常表示へ戻る(削除しない) |
 | ツールバーの「並べ替え」 | 並べ替えモードへ切り替える |
 | 並べ替えモードの「完了」 | 通常モードへ戻る(この時点の並び順をそのまま保持) |
-| 上矢印ボタン | その項目と1つ上の項目の`sort_order`を入れ替える |
-| 下矢印ボタン | その項目と1つ下の項目の`sort_order`を入れ替える |
+| ドラッグハンドル(≡)の長押し→ドラッグ | 約300ms長押し後、指の移動に追従して挿入位置を更新する。離した時点の並びで全項目の`sort_order`を振り直す |
 | EmptyPackingの「テンプレから追加」 | `trip_type`対応テンプレート項目一式を追加する |
 | AddFormの「追加」 | 入力値をバリデーションし、問題なければ末尾に新規項目を追加する |
 
