@@ -1,0 +1,41 @@
+## 20:30 W2 UIフィードバック4件対応(並べ替えドラッグ化・ボタン名変更・ログ写真削除の選択式化・ツールバー余白)
+
+- Goal: W2デモに対するオーナー指摘4件(並べ替えドラッグ化・ボタン名変更・写真削除の選択式化・ツールバー余白)が実装され、lint/typecheck/testが通る状態になる
+- 結果: 達成
+- やったこと:
+  - 修正1: 持ち物(S3a)・TODO(S3b)の並べ替えモードを上下矢印ボタンから長押し(約300ms)ドラッグに変更
+    - `src/lib/drag-sort.ts`: 座標→挿入インデックス計算(`computeDropIndex`)・配列並べ替え(`moveIdToIndex`)・TODOのグループ境界クランプ(`clampIndexToGroupRange`)を純粋関数として切り出し、`src/lib/drag-sort.test.ts`で単体テスト(18件)
+    - `src/lib/use-drag-sort.ts`: Pointer Events(`onPointerDown`+`window`の`pointermove`/`pointerup`/`pointercancel`)のみで実装する共有フック。新規npm依存なし(HTML5 Drag&DropはモバイルSafari等で実質使えないため不採用)。ドラッグ中の「確定した並び順」はイベントリスナーのクロージャ内ローカル変数で追跡し(pointerup時点で読む値が常に最新であることを保証)、レンダリング用の`order`/`draggingId`はuseStateのみで管理(react-hooks/refsルール対応。レンダー中に`ref.current`を読むとESLintエラーになったため設計を修正した)
+    - `src/components/packing/PackingRowSortMode.tsx` / `src/components/todo/TodoRowSortMode.tsx`: 上下矢印ボタンを廃止し、行右端にドラッグハンドル(≡、`aria-label="ドラッグして並べ替え"`)を表示。ドラッグ中の行は`touch-none`+影+半透明(`shadow-lg opacity-80`)で強調。TODOはグループ境界(期限日+完了状態)を越えて移動できないよう`groupKeyOf`で制約
+    - `src/components/packing/PackingTab.tsx` / `src/components/todo/TodoTab.tsx`: `handleMoveUp`/`handleMoveDown`(TODOは`handleMove`)を`useDragSort`+`handleDrop`に置き換え。既存の`reorderPackingItems`/`reorderTodos`(保存API)はそのまま呼ぶ
+    - `docs/design/screens/S3a_持ち物.md` `docs/design/screens/S3b_TODO.md`: 矢印ボタンの記述をドラッグ操作の記述に更新
+    - 旅程(`EntryRowSortMode.tsx`/`ItinerarySection.tsx`)はスコープ外のため未変更
+  - 修正2: 旅程のスポット追加ボタン文言変更
+    - `src/components/itinerary/AddSpotBar.tsx`: 「シードスポットから探す」→「おすすめスポットから探す」
+    - `docs/design/screens/S3c_旅程スポット.md`: ボタンラベルとして出ている「シードスポットから探す」の全箇所(6箇所)を「おすすめスポットから探す」に統一。1箇所(削除範囲の説明文中の「シードスポットは同梱JSON参照のため…」)は一般名詞としての技術用語のため変更していない(ユーザー向け文言ではないため)
+    - `src/components/spots-search/`配下は「シードスポット」の文言自体が存在しなかったため変更なし
+  - 修正3: ログの写真削除を選択式に変更
+    - `src/components/log/LogPhotoCard.tsx`: 右上の常時🗑削除ボタンを削除。`selectMode`/`selected`/`onToggleSelect`propsを追加し、選択モード中はカードタップで選択トグル(チェックの丸オーバーレイ表示)、編集は無効化
+    - `src/components/log/LogToolbar.tsx`: 「写真を追加」の横に「削除」ボタン追加(写真1枚以上の時のみ表示)。「削除」タップで選択モードに入り、ツールバーが「キャンセル」+「削除(N)」に切り替わる。「削除(N)」タップでツールバー直下にインライン確認バー(「選択したN枚を削除しますか？」+「削除する」+「キャンセル」)を表示。`window.confirm`は未使用
+    - `src/components/log/LogTab.tsx`: `deletingId`(単写真削除確認)を`selectMode`/`selectedIds`/`confirmingDelete`に置き換え。確定時は選択分をまとめて既存の`deletePhoto`で削除
+    - `src/components/log/LogPhotoCardConfirmDelete.tsx`: 単写真削除確認フローが不要になったため削除(残骸を残さない)
+    - `docs/design/screens/S3d_ログ.md`: 削除フローの記述(LogPhotoCardConfirmDeleteセクション→「写真削除(選択モード)」セクション)、状態表・タップ時の挙動表・文言一覧を更新
+  - 修正4: ログのツールバー余白
+    - `src/components/log/LogToolbar.tsx`: ツールバー行を`h-11`固定の1行構成から、`pt-3`(上余白)付きのラッパー(`flex flex-col gap-2 pt-3 pb-2`)に変更し、タブバーへの密着を解消
+    - `docs/design/screens/S3d_ログ.md`: レイアウト節に上部余白`space-3`の記述を追加
+  - 共通: `npm run lint` / `npx tsc --noEmit` / `npm test`(vitest run、312件)を実行し全て成功を確認
+- できていないこと: なし
+- 不明点・仮置き:
+  - TODOのドラッグは「同じ期限グループ内でのみ移動可能」という既存の矢印ボタン時代の制約(`docs/design/screens/S3b_TODO.md`)をそのまま踏襲し、`groupKeyOf`でグループ境界を越えられないようクランプする設計にした。仕様にドラッグ化後の挙動指定は無いため、既存の設計意図(グループ境界を越えた並べ替えは`sort_order`のタイブレークにしか影響しないため許可しても実害は無いが、視覚的なスナップバックで混乱を招く)を優先する仮置きとした
+  - ドラッグ中の視覚表現は「影+半透明+リアルタイムな並び直り」とし、指の位置に追従するtransformは実装していない(ドラッグ対象行自体が挿入位置へリフロー表示されるiOSライクな方式。要件4「対象行を強調し挿入位置がわかるように」は満たすと判断したが、ピクセル単位で指に追従する表現が必要な場合は追加実装が要る)
+  - ログの一括削除は`Promise.all`で並列に`deletePhoto`を呼んでいる(件数は最大20件程度でIndexedDBのローカル削除のため、直列awaitループより素直な実装としてこちらを採用)
+- 成果物:
+  - `src/lib/drag-sort.ts` / `src/lib/drag-sort.test.ts`(新規)
+  - `src/lib/use-drag-sort.ts`(新規)
+  - `src/components/packing/PackingRowSortMode.tsx` / `src/components/packing/PackingTab.tsx`
+  - `src/components/todo/TodoRowSortMode.tsx` / `src/components/todo/TodoTab.tsx`
+  - `src/components/itinerary/AddSpotBar.tsx`
+  - `src/components/log/LogPhotoCard.tsx` / `src/components/log/LogToolbar.tsx` / `src/components/log/LogTab.tsx`
+  - `src/components/log/LogPhotoCardConfirmDelete.tsx`(削除)
+  - `docs/design/screens/S3a_持ち物.md` / `docs/design/screens/S3b_TODO.md` / `docs/design/screens/S3c_旅程スポット.md` / `docs/design/screens/S3d_ログ.md`
+  - ブランチ: `claude/w2-ui-refinements-17nk5f`(コミット2件: 修正1 / 修正2〜4)。push・PR作成は呼び出し元が実施

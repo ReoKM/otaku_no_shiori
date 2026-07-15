@@ -15,7 +15,7 @@ export function AddSpotBar({ onFindSeed, onOpenFreeForm }: AddSpotBarProps) {
         onClick={onFindSeed}
         className="h-11 flex-1 rounded-lg bg-pink-500 px-3 text-base font-semibold text-white"
       >
-        シードスポットから探す
+        おすすめスポットから探す
       </button>
       <button
         type="button"
