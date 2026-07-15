@@ -11,7 +11,6 @@ import type { Photo } from "@/types/shiori";
 import { EmptyLog } from "./EmptyLog";
 import { LogDateGroup } from "./LogDateGroup";
 import { LogPhotoCard } from "./LogPhotoCard";
-import { LogPhotoCardConfirmDelete } from "./LogPhotoCardConfirmDelete";
 import { LogPhotoCardEditing } from "./LogPhotoCardEditing";
 import { LogPhotoCardError } from "./LogPhotoCardError";
 import { LogPhotoCardProcessing } from "./LogPhotoCardProcessing";
@@ -51,7 +50,9 @@ export function LogTab({ shioriId }: { shioriId: string }) {
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [processing, setProcessing] = useState<ProcessingItem[]>([]);
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -146,7 +147,6 @@ export function LogTab({ shioriId }: { shioriId: string }) {
   }
 
   function handleStartEdit(photo: Photo) {
-    setDeletingId(null);
     setEditDraft({ id: photo.id, caption: photo.caption ?? "", dayDate: photo.day_date ?? "" });
   }
 
@@ -167,19 +167,59 @@ export function LogTab({ shioriId }: { shioriId: string }) {
     setEditDraft(null);
   }
 
-  function handleStartDelete(photo: Photo) {
+  function handleEnterSelectMode() {
     setEditDraft(null);
-    setDeletingId(photo.id);
+    setSelectMode(true);
+    setSelectedIds(new Set());
+    setConfirmingDelete(false);
   }
 
-  function handleCancelDelete() {
-    setDeletingId(null);
+  function handleCancelSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setConfirmingDelete(false);
   }
 
-  async function handleConfirmDelete(id: string) {
-    await deletePhoto(id);
-    setPhotos((prev) => (prev ? prev.filter((p) => p.id !== id) : prev));
-    setDeletingId((prev) => (prev === id ? null : prev));
+  function handleToggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function handleRequestDeleteConfirm() {
+    if (selectedIds.size === 0) {
+      return;
+    }
+    setConfirmingDelete(true);
+  }
+
+  function handleCancelConfirm() {
+    setConfirmingDelete(false);
+  }
+
+  async function handleConfirmBulkDelete() {
+    // await後にstate変数(selectedIds)を直接参照しないよう、対象idを先にローカルへ固定する。
+    const ids = Array.from(selectedIds);
+    // 1件の失敗で全体がrejectして後続のsetState(選択モード解除)が走らなくなるのを防ぐため、
+    // Promise.allSettledで全件の成否を待つ(PR #68レビュー指摘反映)。
+    const results = await Promise.allSettled(ids.map((id) => deletePhoto(id)));
+    // 削除に成功した写真のみUIから除去する(失敗した写真はDBに残っているため表示も残す)。
+    const deletedIds = new Set(ids.filter((_, i) => results[i].status === "fulfilled"));
+    setPhotos((prev) => (prev ? prev.filter((p) => !deletedIds.has(p.id)) : prev));
+    // 成否に関わらず選択モード・確認バー・選択状態は解除する(UIが固まるのを防ぐ)。
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    setConfirmingDelete(false);
+    const failedCount = ids.length - deletedIds.size;
+    if (failedCount > 0) {
+      showNotice(`${failedCount}枚の削除に失敗しました`);
+    }
   }
 
   const listItems: LogListItem[] = useMemo(() => {
@@ -206,7 +246,20 @@ export function LogTab({ shioriId }: { shioriId: string }) {
   if (photos === null) {
     return (
       <div className="flex flex-1 flex-col">
-        <LogToolbar count={0} max={maxPhotos} disabled onAddPhoto={() => {}} />
+        <LogToolbar
+          count={0}
+          max={maxPhotos}
+          addDisabled
+          selectMode={false}
+          confirming={false}
+          selectedCount={0}
+          onAddPhoto={() => {}}
+          onEnterSelectMode={() => {}}
+          onCancelSelectMode={() => {}}
+          onRequestDeleteConfirm={() => {}}
+          onConfirmDelete={() => {}}
+          onCancelConfirm={() => {}}
+        />
         <LogSkeleton />
       </div>
     );
@@ -214,7 +267,20 @@ export function LogTab({ shioriId }: { shioriId: string }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <LogToolbar count={savedCount} max={maxPhotos} disabled={disabled} onAddPhoto={handleAddPhotoClick} />
+      <LogToolbar
+        count={savedCount}
+        max={maxPhotos}
+        addDisabled={disabled}
+        selectMode={selectMode}
+        confirming={confirmingDelete}
+        selectedCount={selectedIds.size}
+        onAddPhoto={handleAddPhotoClick}
+        onEnterSelectMode={handleEnterSelectMode}
+        onCancelSelectMode={handleCancelSelectMode}
+        onRequestDeleteConfirm={handleRequestDeleteConfirm}
+        onConfirmDelete={handleConfirmBulkDelete}
+        onCancelConfirm={handleCancelConfirm}
+      />
       <input
         ref={fileInputRef}
         type="file"
@@ -244,7 +310,7 @@ export function LogTab({ shioriId }: { shioriId: string }) {
                     );
                   }
                   const photo = item.photo;
-                  if (editDraft?.id === photo.id) {
+                  if (!selectMode && editDraft?.id === photo.id) {
                     return (
                       <LogPhotoCardEditing
                         key={photo.id}
@@ -267,22 +333,14 @@ export function LogTab({ shioriId }: { shioriId: string }) {
                       />
                     );
                   }
-                  if (deletingId === photo.id) {
-                    return (
-                      <LogPhotoCardConfirmDelete
-                        key={photo.id}
-                        photo={photo}
-                        onDelete={() => handleConfirmDelete(photo.id)}
-                        onCancel={handleCancelDelete}
-                      />
-                    );
-                  }
                   return (
                     <LogPhotoCard
                       key={photo.id}
                       photo={photo}
                       onTapEdit={() => handleStartEdit(photo)}
-                      onTapDelete={() => handleStartDelete(photo)}
+                      selectMode={selectMode}
+                      selected={selectedIds.has(photo.id)}
+                      onToggleSelect={() => handleToggleSelect(photo.id)}
                     />
                   );
                 })}
