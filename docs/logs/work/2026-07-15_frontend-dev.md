@@ -39,3 +39,19 @@
   - `src/components/log/LogPhotoCardConfirmDelete.tsx`(削除)
   - `docs/design/screens/S3a_持ち物.md` / `docs/design/screens/S3b_TODO.md` / `docs/design/screens/S3c_旅程スポット.md` / `docs/design/screens/S3d_ログ.md`
   - ブランチ: `claude/w2-ui-refinements-17nk5f`(コミット2件: 修正1 / 修正2〜4)。push・PR作成は呼び出し元が実施
+
+## 20:45 PR #68レビュー指摘の修正(gemini-code-assist 3件)
+
+- Goal: レビュー指摘3件(pre-dragクリーンアップ漏れ・TODOドロップ時フリッカー・一括削除のエラーハンドリング)が修正され、lint/typecheck/testが通る状態でコミットされている
+- 結果: 達成
+- やったこと:
+  - 指摘1 `src/lib/use-drag-sort.ts`: 長押し判定中(pre-drag)の`detach`関数を`cleanupRef.current`に格納し、判定中のアンマウントでもuseEffectクリーンアップでタイマー・windowリスナーが解放されるようにした。`detach`内では`cleanupRef.current === detach`の場合のみnullクリアし、`beginDrag`が設定したcleanupを消さないようにした。docコメントにも追記
+  - 指摘2 `src/components/todo/TodoTab.tsx` `handleDrop`: `setTodos(resequenced)`を`await reorderTodos(...)`の前に移動(楽観更新)。ドロップ直後にuseDragSortの暫定並びが解除される→DB書き込み完了までの間に一瞬元の並びへ戻るフリッカーを解消。PackingTabの`handleDrop`と同パターンに統一
+  - 指摘3 `src/components/log/LogTab.tsx` `handleConfirmBulkDelete`: `Promise.all`→`Promise.allSettled`に変更し、1件の失敗で後続のsetStateが走らずUIが確認バー表示のまま固まる問題を解消。削除に成功した(fulfilled)idのみ`setPhotos`から除去し(失敗分はDBに残るため表示も残す)、成否に関わらず選択モード・確認バー・選択状態を解除。1件以上失敗した場合は既存の`showNotice`で「N枚の削除に失敗しました」を表示。対象idは`await`前にローカル(`ids`)へ固定し、await後のstate直接参照を排除
+  - `npm run lint` / `npx tsc --noEmit` / `npm test`(312件)を実行し全て成功を確認
+- できていないこと:
+  - 指摘3の「失敗分は表示に残す」挙動のユニットテストは追加していない(該当ロジックは`results[i].status === "fulfilled"`によるフィルタ1行で、LogTabはコンポーネントのためレンダリングテスト基盤(@testing-library/react等)の新規追加が必要になる。呼び出し元の「無理にテスト基盤を追加しない」方針に従い見送り)
+- 不明点・仮置き: なし
+- 成果物:
+  - `src/lib/use-drag-sort.ts` / `src/components/todo/TodoTab.tsx` / `src/components/log/LogTab.tsx`
+  - ブランチ `claude/w2-ui-refinements-17nk5f` に1コミット追加。push・PR操作は呼び出し元が実施

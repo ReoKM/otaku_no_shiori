@@ -204,12 +204,22 @@ export function LogTab({ shioriId }: { shioriId: string }) {
   }
 
   async function handleConfirmBulkDelete() {
+    // await後にstate変数(selectedIds)を直接参照しないよう、対象idを先にローカルへ固定する。
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map((id) => deletePhoto(id)));
-    setPhotos((prev) => (prev ? prev.filter((p) => !selectedIds.has(p.id)) : prev));
+    // 1件の失敗で全体がrejectして後続のsetState(選択モード解除)が走らなくなるのを防ぐため、
+    // Promise.allSettledで全件の成否を待つ(PR #68レビュー指摘反映)。
+    const results = await Promise.allSettled(ids.map((id) => deletePhoto(id)));
+    // 削除に成功した写真のみUIから除去する(失敗した写真はDBに残っているため表示も残す)。
+    const deletedIds = new Set(ids.filter((_, i) => results[i].status === "fulfilled"));
+    setPhotos((prev) => (prev ? prev.filter((p) => !deletedIds.has(p.id)) : prev));
+    // 成否に関わらず選択モード・確認バー・選択状態は解除する(UIが固まるのを防ぐ)。
     setSelectMode(false);
     setSelectedIds(new Set());
     setConfirmingDelete(false);
+    const failedCount = ids.length - deletedIds.size;
+    if (failedCount > 0) {
+      showNotice(`${failedCount}枚の削除に失敗しました`);
+    }
   }
 
   const listItems: LogListItem[] = useMemo(() => {

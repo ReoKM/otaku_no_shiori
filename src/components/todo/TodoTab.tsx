@@ -144,8 +144,11 @@ export function TodoTab({ shioriId }: { shioriId: string }) {
       .map((id) => byId.get(id))
       .filter((t): t is Todo => !!t)
       .map((t, i) => ({ ...t, sort_order: i }));
-    await reorderTodos(shioriId, resequenced.map((t) => t.id));
+    // ドロップ直後にuseDragSortの暫定並び(visualOrder)が解除されるため、DB書き込みを
+    // 待ってからsetTodosすると一瞬元の並びに戻って見える。先にローカルを更新する(楽観更新。
+    // PackingTabのhandleDropと同パターン。PR #68レビュー指摘反映)。
     setTodos(resequenced);
+    await reorderTodos(shioriId, resequenced.map((t) => t.id));
   }
 
   const dragSort = useDragSort({

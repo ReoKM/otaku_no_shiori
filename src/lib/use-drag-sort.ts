@@ -42,6 +42,8 @@ export interface UseDragSortResult {
  * イベントリスナー内で読むとクロージャが古い値を参照する可能性がある)。
  * レンダリング用の表示状態(`order`/`draggingId`)はuseStateのみで管理し、
  * レンダー中にref(`.current`)を読まないようにする(react-hooks/refsルール対応)。
+ * 長押し判定中(pre-drag)のタイマー・リスナーも`cleanupRef`に格納し、
+ * 判定中のアンマウントでも確実に解放する(PR #68レビュー指摘反映)。
  */
 export function useDragSort({
   ids,
@@ -163,11 +165,18 @@ export function useDragSort({
       const startX = e.clientX;
       const startY = e.clientY;
 
+      // pre-drag(長押し判定中)のタイマー・リスナーもcleanupRefへ格納し、判定中に
+      // コンポーネントがアンマウントされた場合でもuseEffectのクリーンアップで解放する
+      // (解放しないとタイマー発火でアンマウント後にbeginDrag=setStateが走る)。
       function detach() {
         window.clearTimeout(timer);
         window.removeEventListener("pointermove", onPreMove);
         window.removeEventListener("pointerup", onPreEnd);
         window.removeEventListener("pointercancel", onPreEnd);
+        // beginDragが設定したcleanupを消さないよう、自分自身が入っている場合のみクリアする
+        if (cleanupRef.current === detach) {
+          cleanupRef.current = null;
+        }
       }
 
       function onPreMove(ev: PointerEvent) {
@@ -190,6 +199,7 @@ export function useDragSort({
       window.addEventListener("pointermove", onPreMove);
       window.addEventListener("pointerup", onPreEnd);
       window.addEventListener("pointercancel", onPreEnd);
+      cleanupRef.current = detach;
     },
     [beginDrag, longPressMs],
   );
