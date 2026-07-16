@@ -5,9 +5,12 @@
  */
 export function AdSlotPlaceholder() {
   return (
-    <div className="flex h-20 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 text-center">
+    <aside
+      aria-label="プロモーション"
+      className="flex h-20 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 text-center"
+    >
       <p className="text-sm font-semibold text-neutral-700">オタクのしおり</p>
       <p className="text-xs text-neutral-500">遠征のおともに。持ち物・TODO・旅程をこの1冊で。</p>
-    </div>
+    </aside>
   );
 }

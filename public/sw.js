@@ -56,12 +56,22 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// キャッシュ書き込みの失敗(容量不足・プライベートブラウジング等)が、取得に成功した
+// レスポンスの返却を妨げないよう、書き込みはここで握りつぶす(PR #71レビュー指摘反映)。
+async function updateCache(request, response) {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, response.clone());
+  } catch {
+    // 書き込み失敗は無視(次回オンライン時に再試行される)
+  }
+}
+
 async function networkFirstPage(request) {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
+      await updateCache(request, response);
     }
     return response;
   } catch {
@@ -87,8 +97,7 @@ async function cacheFirst(request) {
   }
   const response = await fetch(request);
   if (response.ok) {
-    const cache = await caches.open(CACHE_NAME);
-    cache.put(request, response.clone());
+    await updateCache(request, response);
   }
   return response;
 }
