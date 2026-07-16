@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AdSlotPlaceholder } from "@/components/common/AdSlotPlaceholder";
 import { EmptyState } from "@/components/shiori/EmptyState";
@@ -70,6 +71,14 @@ export default function Home() {
           ))}
         <AdSlotPlaceholder />
       </main>
+      <footer className="flex items-center justify-center gap-6 px-4 pb-6 pt-2">
+        <Link href="/terms" className="text-xs text-neutral-400 underline-offset-2 hover:underline">
+          利用規約
+        </Link>
+        <Link href="/privacy" className="text-xs text-neutral-400 underline-offset-2 hover:underline">
+          プライバシーポリシー
+        </Link>
+      </footer>
       {state === "ready" && shioriList.length > 0 && <FabButton />}
     </div>
   );
