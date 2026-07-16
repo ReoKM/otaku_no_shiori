@@ -20,7 +20,7 @@ const listClass = "list-disc flex flex-col gap-1 pl-5 text-sm leading-relaxed te
 
 export default function TermsPage() {
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
+    <div className="flex flex-1 flex-col bg-neutral-50">
       <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white px-4 py-4">
         <Link href="/" className="text-sm text-pink-500">
           ← ホームへ戻る
@@ -97,7 +97,7 @@ export default function TermsPage() {
         <section className={sectionClass}>
           <h2 className={headingClass}>第7条(準拠法・裁判管轄)</h2>
           <p className={bodyClass}>
-            本規約の解釈にあたっては日本法を準拠法とします。本サービスに関して紛争が生じた場合には、運営者の所在地を管轄する裁判所を専属的合意管轄とします。
+            本規約の解釈にあたっては日本法を準拠法とします。本サービスに関して紛争が生じた場合には、運営者の所在地を管轄する裁判所を第一審の専属的合意管轄裁判所とします。
           </p>
         </section>
 

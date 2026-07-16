@@ -21,7 +21,7 @@ const listClass = "list-disc flex flex-col gap-1 pl-5 text-sm leading-relaxed te
 
 export default function PrivacyPage() {
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
+    <div className="flex flex-1 flex-col bg-neutral-50">
       <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white px-4 py-4">
         <Link href="/" className="text-sm text-pink-500">
           ← ホームへ戻る
