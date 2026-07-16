@@ -1,0 +1,224 @@
+{
+  "spots": [
+    {
+      "id": "seed-hinatazaka-slope",
+      "name": "日向坂",
+      "description": "日向坂46のグループ名の由来となった、東京都港区三田に実在する坂。読みは本来「ひゅうがざか」だが、ひらがなにしたときの字画が運勢的に良いという理由で「ひなたざか」の読みが採用された。",
+      "category": "seichi",
+      "area": "東京都港区",
+      "map_query": "日向坂 東京都港区三田",
+      "source": "seed",
+      "caution": "住宅街の生活道路のため、通行の妨げや長時間の滞在・大声を控える",
+      "refs": [
+        "https://www.date-navi.com/future/20190207/index2.html",
+        "https://www.walkerplus.com/article/179123/",
+        "https://www.city.minato.tokyo.jp/kyouikucenter/kodomo/kids/machinami/saka/04.html"
+      ]
+    },
+    {
+      "id": "seed-keyakizaka-street",
+      "name": "けやき坂(六本木けやき坂通り)",
+      "description": "日向坂46の前身グループ「けやき坂46」のグループ名の由来となった、六本木ヒルズを東西に貫く並木道。改名前はこの坂の名前がそのままグループ名として使われていた。",
+      "category": "seichi",
+      "area": "東京都港区六本木",
+      "map_query": "けやき坂通り 六本木ヒルズ",
+      "source": "seed",
+      "refs": [
+        "https://ja.wikipedia.org/wiki/%E3%81%91%E3%82%84%E3%81%8D%E5%9D%82",
+        "https://cancam.jp/archives/646556",
+        "https://ecnavi.jp/mainichi_news/article/4bb1901070009c6c2dc2efa8f491f835/"
+      ]
+    },
+    {
+      "id": "seed-tokyo-dome",
+      "name": "東京ドーム",
+      "description": "2022年3月30日・31日、コロナ禍による2度の延期を乗り越えて実現した日向坂46初の東京ドーム公演「3周年記念MEMORIAL LIVE〜3回目のひな誕祭〜」の会場。前身けやき坂46時代から目標に掲げてきた念願の舞台で、代表曲「約束の卵」ゆかりの地でもある。",
+      "category": "venue",
+      "area": "東京都文京区",
+      "map_query": "東京ドーム 文京区",
+      "source": "seed",
+      "refs": [
+        "https://www.oricon.co.jp/news/2229708/full/",
+        "https://realsound.jp/2022/04/post-1000017.html",
+        "https://natalie.mu/music/news/605652"
+      ]
+    },
+    {
+      "id": "seed-yokohama-arena",
+      "name": "横浜アリーナ",
+      "description": "日向坂46が2023年9月・2024年10月など、単独公演を繰り返し開催してきた定番のライブ会場。",
+      "category": "venue",
+      "area": "神奈川県横浜市港北区",
+      "map_query": "横浜アリーナ",
+      "source": "seed",
+      "refs": [
+        "https://www.livefans.jp/events/1567432",
+        "https://www.livefans.jp/events/1711868",
+        "https://www.hinatazaka46.com/s/official/news/detail/E00528"
+      ]
+    },
+    {
+      "id": "seed-yokohama-stadium",
+      "name": "横浜スタジアム",
+      "description": "2023年4月・2024年4月と2年連続で「ひな誕祭」単独ライブが開催された屋外球場。2度目の開催は2023年12月のKアリーナ横浜公演のステージ上で発表された。",
+      "category": "venue",
+      "area": "神奈川県横浜市中区",
+      "map_query": "横浜スタジアム",
+      "source": "seed",
+      "refs": [
+        "https://www.walkerplus.com/article/1172121/",
+        "https://tower.jp/article/news/2023/12/12/tg003",
+        "https://www.livefans.jp/events/1621174"
+      ]
+    },
+    {
+      "id": "seed-saitama-super-arena",
+      "name": "さいたまスーパーアリーナ",
+      "description": "2019年9月26日、日向坂46への改名後初のワンマンライブ「3rdシングル発売記念ワンマンライブ」を開催した会場。自身最大規模となる2万席が即完売した。",
+      "category": "venue",
+      "area": "埼玉県さいたま市中央区",
+      "map_query": "さいたまスーパーアリーナ",
+      "source": "seed",
+      "refs": [
+        "https://www.oricon.co.jp/news/2145236/full/",
+        "https://www.billboard-japan.com/d_news/detail/80475"
+      ]
+    },
+    {
+      "id": "seed-nippon-budokan",
+      "name": "日本武道館",
+      "description": "前身けやき坂46時代の2018年1月30日〜2月1日公演の舞台であり、2024年8月には四期生単独公演「四期生ライブ」が開催された会場。グループの歴史的な転機となった思い出の場所として位置付けられている。",
+      "category": "venue",
+      "area": "東京都千代田区",
+      "map_query": "日本武道館",
+      "source": "seed",
+      "refs": [
+        "https://ototoy.jp/news/119472",
+        "https://www.galpo.info/feature/list/10466",
+        "https://www.hinatazaka46.com/s/official/page/4th_memberslive"
+      ]
+    },
+    {
+      "id": "seed-makuhari-messe",
+      "name": "幕張メッセ(イベントホール)",
+      "description": "年末恒例のクリスマスライブ「ひなくり」(2019年・2021年)をはじめ、日向坂46が繰り返し公演を行ってきた会場。",
+      "category": "venue",
+      "area": "千葉県千葉市美浜区",
+      "map_query": "幕張メッセ イベントホール",
+      "source": "seed",
+      "refs": [
+        "https://www.livefans.jp/events/1742277",
+        "https://www.livefans.jp/events/1782068",
+        "https://www.hinatazaka46.com/s/official/news/detail/E00062"
+      ]
+    },
+    {
+      "id": "seed-pacifico-yokohama",
+      "name": "パシフィコ横浜(国立大ホール)",
+      "description": "前身けやき坂46時代の2018年6月4日、全国ツアー「走り出す瞬間」初日公演のアンコールで、代表曲「約束の卵」が初披露された会場。",
+      "category": "venue",
+      "area": "神奈川県横浜市西区",
+      "map_query": "パシフィコ横浜 国立大ホール",
+      "source": "seed",
+      "refs": [
+        "https://prtimes.jp/main/html/rd/p/000001442.000013546.html",
+        "https://realsound.jp/2022/04/post-1000017.html"
+      ]
+    },
+    {
+      "id": "seed-k-arena-yokohama",
+      "name": "Kアリーナ横浜",
+      "description": "2023年12月9日・10日、全国ツアー「Happy Train Tour 2023」の追加公演として2日間で計4万人を動員した会場。2度目の横浜スタジアム単独ライブもこの公演のステージ上で発表された。",
+      "category": "venue",
+      "area": "神奈川県横浜市西区",
+      "map_query": "Kアリーナ横浜",
+      "source": "seed",
+      "refs": [
+        "https://spice.eplus.jp/articles/324571",
+        "https://k-arena.com/en/schedule/20231210-1/"
+      ]
+    },
+    {
+      "id": "seed-pia-arena-mm",
+      "name": "ぴあアリーナMM",
+      "description": "2025年7月29日〜31日、四期生単独公演「四期生ライブ Presented by 新・日向坂ミュージックパレード」が開催された会場。",
+      "category": "venue",
+      "area": "神奈川県横浜市西区",
+      "map_query": "ぴあアリーナMM",
+      "source": "seed",
+      "refs": [
+        "https://hinapare-live.jp/"
+      ]
+    },
+    {
+      "id": "seed-hinata-miyazaki-sports-park",
+      "name": "ひなた宮崎県総合運動公園",
+      "description": "日向坂46が「日本のひなた」こと宮崎県で開催する音楽フェス「ひなたフェス」の全体会場。入園無料で、飲食ブースや各種ステージが並ぶ。2024年開催時は2日間で計4万人を動員した。",
+      "category": "venue",
+      "area": "宮崎県宮崎市",
+      "map_query": "ひなた宮崎県総合運動公園",
+      "source": "seed",
+      "caution": "フェス開催日は周辺道路・公共交通が非常に混雑するため、公式サイトの交通・宿泊案内に従う",
+      "refs": [
+        "https://www.hinata-fes2026.com/",
+        "https://www.city.miyazaki.miyazaki.jp/culture/tourism/407997.html",
+        "https://www.kanko-miyazaki.jp/event/2478"
+      ]
+    },
+    {
+      "id": "seed-hinata-sunmarine-stadium",
+      "name": "ひなたサンマリンスタジアム宮崎",
+      "description": "「ひなたフェス」内で日向坂46本公演のライブが行われる野球場。2024年開催時は2日間で計4万人を動員し、2026年開催では5万人規模の観客が見込まれている。",
+      "category": "venue",
+      "area": "宮崎県宮崎市",
+      "map_query": "ひなたサンマリンスタジアム宮崎",
+      "source": "seed",
+      "caution": "フェス開催日は周辺道路・公共交通が非常に混雑するため、公式サイトの交通・宿泊案内に従う",
+      "refs": [
+        "https://www.hinatazaka46.com/s/official/page/hinata_fes2024_access",
+        "https://spice.eplus.jp/articles/331819"
+      ]
+    },
+    {
+      "id": "seed-aoshima-shrine",
+      "name": "青島神社",
+      "description": "宮崎市が公開する日向坂46の聖地マップに掲載される、メンバーがテレビ番組・YouTubeチャンネルの撮影で宮崎市を訪れた際に立ち寄ったスポットの一つ。日本神話「海幸彦と山幸彦」の舞台としても知られる神社。",
+      "category": "seichi",
+      "area": "宮崎県宮崎市",
+      "map_query": "青島神社 宮崎市",
+      "source": "seed",
+      "caution": "神社の参拝マナーを守り、私語・大声や撮影ルールに配慮する",
+      "refs": [
+        "https://www.city.miyazaki.miyazaki.jp/culture/tourism/379019.html",
+        "https://www.kanko-miyazaki.jp/spot/1207"
+      ]
+    },
+    {
+      "id": "seed-shinjuku-miyazakikan-konne",
+      "name": "新宿みやざき館KONNE",
+      "description": "宮崎県の東京アンテナショップ。ひなたフェスの際に日向坂46メンバーから贈られたサイン入り記念パネルなど、フェスにまつわる特別展示が定期的に行われている。",
+      "category": "goods",
+      "area": "東京都渋谷区",
+      "map_query": "新宿みやざき館KONNE",
+      "source": "seed",
+      "refs": [
+        "https://prtimes.jp/main/html/rd/p/000000150.000115850.html",
+        "https://www.pref.miyazaki.lg.jp/kanko-suishin/press/2024/09/20240925.html"
+      ]
+    },
+    {
+      "id": "seed-tower-records-shibuya",
+      "name": "タワーレコード渋谷店",
+      "description": "2019年・2021年・2026年など、日向坂46の発売記念キャンペーンや撮り下ろしコラボポスターの掲出が繰り返し行われてきたタワーレコードの旗艦店。",
+      "category": "goods",
+      "area": "東京都渋谷区",
+      "map_query": "タワーレコード渋谷店",
+      "source": "seed",
+      "refs": [
+        "https://tower.jp/article/news/2019/03/20/n102",
+        "https://tower.jp/article/campaign/2021/06/02/02",
+        "https://tower.jp/article/news/2026/05/12/n301"
+      ]
+    }
+  ]
+}

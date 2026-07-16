@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // netlify-cli(dev/functions:serve)のビルド残骸。gitignore済みだがESLintは別途無視が必要
+    ".netlify/**",
   ]),
 ]);
 

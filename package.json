@@ -11,10 +11,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "idb": "^8.0.3",
     "next": "16.2.10",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "satori": "^0.26.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

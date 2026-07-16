@@ -72,12 +72,25 @@ export default function ShioriDetailLayout({ children }: { children: React.React
   const activeTab = resolveActiveTab(pathname, shioriId);
   const dateRange = shiori ? formatDateRange(shiori.start_date, shiori.end_date) : null;
 
+  // S4(スポット検索 `/shiori/[id]/spots/...`)/S5(共有画像 `/shiori/[id]/share`)は
+  // 独自のヘッダー・戻る導線を持つ専用画面のため、このレイアウトのタブシェル
+  // (ヘッダー+タブバー)を適用しない。
+  // 参照: docs/design/screens/S4_スポット検索.md「レイアウト」(一覧画面ヘッダー/詳細画面ヘッダー)、
+  // docs/design/screens/S5_共有画像プレビュー.md「レイアウト」(専用ヘッダー「共有画像を作る」)
+  if (
+    pathname.startsWith(`/shiori/${shioriId}/spots`) ||
+    pathname.startsWith(`/shiori/${shioriId}/share`)
+  ) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
       <ShioriDetailHeader
         loading={state === "loading"}
         title={state === "not-found" ? "しおりが見つかりません" : (shiori?.title ?? "")}
         dateRange={dateRange}
+        shareHref={state === "ready" ? `/shiori/${shioriId}/share` : undefined}
       />
       <TabBar shioriId={shioriId} activeTab={activeTab} disabled={state === "loading"} />
       <div className="flex flex-1 flex-col">

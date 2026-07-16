@@ -1,0 +1,30 @@
+## 09:30 W2週次計画の作成
+
+- Goal: W2週次計画`docs/plans/2026-W29.md`が作成され、タスクがGitHub Issue化され、PRが出ている状態にする
+- 結果: 達成
+- やったこと:
+  - `.claude/skills/weekly-plan/SKILL.md`の手順・セルフチェック4項目を確認
+  - `docs/02_roadmap.md`のW2マイルストーン(旅程F4/スポットF5・シードデータ最小投入/写真とログF6/共有画像生成F7)、`docs/01_service_spec.md`のF4〜F7・S3〜S5仕様(2026-07-11オーナー決定でスポットは旅程タブS3c内セクション)、`docs/03_tech_stack.md`(satori+resvgのNetlify Functions、写真クライアントリサイズ1600px、Storage 2MB制限)を確認
+  - `docs/plans/2026-W28.md`(W1計画)を参照しフォーマット・粒度を踏襲
+  - `src/lib/guest-store.ts`(DB_VERSION 1、shiori/packing_items/todosの3ストアのみ)を確認し、W2でitinerary_entries/shiori_spots/photosストア追加が必要と判断
+  - `docs/design/screens/S3_しおり詳細.md`(旅程/ログタブが準備中表示のみの現状)、`.claude/skills/seed-spot/SKILL.md`(シードデータJSONスキーマ)、`netlify.toml`(external_node_modules設定済み)を確認
+  - GitHub Issue未完了件数を確認(W1分Issue #3〜#13がOPENのまま。今回のスコープ外のため個別対応はせず前提に記載のみ)
+  - 今週のゴールを3件に決定: (1)旅程+スポット(S3c) (2)写真とログ(F6) (3)共有画像生成(F7)
+  - タスクを13件に分解: UI設計4件(S3c/S4/S3d/S5)、ゲスト保存基盤拡張1件、シードデータ調査1件、共有画像テンプレ実装1件、機能実装4件(F4/F5/F6/F7画面)、Netlify Function実装1件、QA1件。各タスクに担当エージェント・優先度・完了条件・依存関係を設定
+  - `docs/plans/2026-W29.md`を作成(セルフチェック4項目の結果・マイルストーンカバレッジ表・オーナー判断3件を含む)
+  - セルフチェック4項目を実行: (1)マイルストーン網羅=全要素に対応タスクあり (2)画面設計の先行=実装タスク全てに先行するUI設計タスクあり (3)推奨Aの後続=判断1・3の推奨Aをタスク9・7の完了条件に条件付きで反映 (4)仮置きの明示=タスク2・3・6・7の完了条件に仮置き明記を追加
+  - GitHub Issue #33〜#45(計13件)をreokm/otaku_no_shioriに作成(担当エージェント名・完了条件・前提・週次計画への参照を本文に明記)
+  - ブランチ`w2/weekly-plan-pm`(origin/w2-integration起点)で作業しコミット・push、base=`w2-integration`でPR作成
+- できていないこと:
+  - Issueへのassignees設定は行っていない(GitHubユーザーとしてのエージェントアカウントが存在しないため、担当は本文とラベルのみで明記)
+  - W1分のOPEN Issue(#3〜#13)のクローズ整理は本タスクのスコープ外のため未対応
+- 不明点・仮置き:
+  - シードスポットデータのソース(アプリ内蔵JSONバンドル vs Supabase `spots`テーブル取得)は未確定のためオーナー判断事項1として提示し、推奨A(JSONバンドル)を前提にタスク9を設計した
+  - Supabaseマイグレーション適用のタイミングをオーナー判断事項2として提示(推奨: 今週は未適用のまま)
+  - 共有画像のデザイントーン(色数・写真の扱い等、仕様に数値・例なし)をオーナー判断事項3として提示(推奨: share-image-designerが初稿を作成しレビューで確定)
+  - S4スポット一覧の並び順・S3dログ一覧の並び順・シードデータ件数(15〜20件目安)は仕様に指定がないため各Issueの完了条件に仮置き明記を指示済み
+  - 使用したPRブランチ名は`w2/weekly-plan-pm`(元々指示された`w2/weekly-plan`は別worktreeで使用中のため衝突回避のためリネーム)
+- 成果物:
+  - docs/plans/2026-W29.md
+  - GitHub Issue #33〜#45(reokm/otaku_no_shiori)
+  - PR(下記参照)
