@@ -30,3 +30,26 @@
   - 新規: `public/manifest.webmanifest` `public/icon.svg` `public/sw.js` `src/lib/sw-routing.ts` `src/lib/sw-routing.test.ts` `src/components/common/ServiceWorkerRegistration.tsx`
   - 変更: `src/app/layout.tsx` `src/components/common/AdSlotPlaceholder.tsx`
   - ブランチ `claude/w2-ui-refinements-17nk5f` に1コミット。push・PR操作は呼び出し元が実施(PR #69)
+
+## 08:55 W3タスク4(利用規約・プライバシーポリシー・LP文言)
+
+- Goal: 利用規約・プライバシーポリシーの静的ページとLP(S1)文言が整備され、CIが通る
+- 結果: 達成
+- やったこと:
+  - `src/app/terms/page.tsx`(利用規約): 適用/利用条件(端末内保存・データ消失免責)/禁止事項(法令違反・第三者の権利侵害等)/無保証・免責/広告/規約の変更/準拠法(日本法)・裁判管轄。server component+metadata付き、neutral系トーン
+  - `src/app/privacy/page.tsx`(プライバシーポリシー): 作成データは端末内IndexedDBのみでサーバー送信なし/共有画像生成時のみサーバーレス関数で一時処理(保存しない)/アクセス解析(GA4等)は「導入する場合がある。導入時に本ポリシーを更新」/広告(AdSense等)は「今後掲載予定」/免責/改定
+  - 両ページとも運営者情報・連絡先・制定日は「(準備中)」プレースホルダ。冒頭コメントに「法務文書はドラフト。公開前にオーナー承認必須」を明記
+  - `src/app/page.tsx`(S1): 下部に /terms /privacy への控えめなフッターリンクを追加
+  - `src/components/shiori/EmptyState.tsx`(LP文言): 見出しをビジョンのコンセプトコピー「遠征のすべてを、1冊のしおりに。」へ変更、説明文に聖地巡礼を含む遠征全般のトーンを反映(docs/00_vision.md準拠)。構造の大改修はなし
+  - `src/app/layout.tsx`: metadataのtitle・descriptionをSEO観点で見直し(コンセプトコピー+機能列挙+「登録なしで無料」)
+  - lint / typecheck / test(317件)全て成功
+- できていないこと:
+  - 運営者情報・連絡先・制定日の確定(オーナー確認事項)
+- 不明点・仮置き:
+  - 法務文書の文面全体がドラフト(公開前にオーナー承認必須。CLAUDE.mdのエスカレーション対象)
+  - 準拠法・専属的合意管轄(運営者所在地の裁判所)は一般的な個人運営サービスの雛形に倣った仮置き
+  - 共有画像生成の一時処理の記述は「サーバーレス関数で処理・保存なし」という現行実装(satori/Netlify Functions)前提。実装が変わったらポリシー更新が必要
+- 成果物:
+  - 新規: `src/app/terms/page.tsx` `src/app/privacy/page.tsx`
+  - 変更: `src/app/page.tsx` `src/components/shiori/EmptyState.tsx` `src/app/layout.tsx`
+  - ブランチ `claude/w2-ui-refinements-17nk5f` に1コミット。push・PR操作は呼び出し元が実施(PR B)

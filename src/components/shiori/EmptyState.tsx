@@ -12,10 +12,10 @@ export function EmptyState() {
   return (
     <div className="flex flex-col gap-4 py-8 text-center">
       <h1 className="text-lg font-bold text-neutral-900">
-        推しの遠征、しおりで身軽に
+        遠征のすべてを、1冊のしおりに。
       </h1>
       <p className="text-base text-neutral-500">
-        持ち物・TODO・旅程をひとつにまとめて、遠征当日も片手でサクサク確認できます。登録なしですぐ使えます。
+        ライブも、イベントも、聖地巡礼も。持ち物・TODO・旅程をひとつにまとめて、遠征当日は片手でサクサク確認。登録なしで、いますぐ無料で使えます。
       </p>
       <button
         type="button"

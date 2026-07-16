@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "オタクのしおり",
+  title: "オタクのしおり | 遠征のすべてを、1冊のしおりに。",
   description:
-    "遠征(ライブ・イベント・聖地巡礼)の持ち物・TODO・旅程を1冊のしおりにまとめられる遠征準備ツール",
+    "ライブ・イベント・聖地巡礼などオタクの遠征準備を1冊の「しおり」に。持ち物リスト・TODO・旅程・行きたいスポット・写真の記録が、登録なしで無料で使える遠征ツールです。",
   manifest: "/manifest.webmanifest",
 };
 
