@@ -1,14 +1,13 @@
 /**
- * F9広告枠のプレースホルダー(位置確保のみ、W1では中身なし)。
- * 参照: docs/design/screens/S1_ホーム一覧.md「3. 広告枠(F9・位置確保のみ)」
+ * F9広告枠(しおり一覧S1下部・ログS3d下部の2箇所のみ。旅程・持ち物・TODOには置かない)。
+ * AdSense審査通過までは自社告知を表示する(F9仕様)。
+ * 公式Xは未開設のため外部導線は入れず、控えめなテキストのみとする。
  */
 export function AdSlotPlaceholder() {
   return (
-    <div
-      className="flex h-20 items-center justify-center rounded-lg border border-dashed border-neutral-300 bg-neutral-100 text-xs text-neutral-400"
-      aria-hidden="true"
-    >
-      広告枠(準備中)
+    <div className="flex h-20 flex-col items-center justify-center gap-1 rounded-lg border border-neutral-200 bg-neutral-50 text-center">
+      <p className="text-sm font-semibold text-neutral-700">オタクのしおり</p>
+      <p className="text-xs text-neutral-500">遠征のおともに。持ち物・TODO・旅程をこの1冊で。</p>
     </div>
   );
 }
