@@ -1,26 +1,72 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * デザイントークン(2026-07 パープル基調リブランド)。
+ * 出典: docs/design/tokens.md。生の16進値はこのファイルにのみ置き、
+ * コンポーネント側はTailwindのデフォルトパレット名(pink, neutral, red, amber)
+ * をそのまま使い続ける運用のため、ここでパレット自体の値を上書きする。
+ */
+@theme {
+  --font-sans: var(--font-space-grotesk), system-ui, sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* ブランドプライマリ(パープル)。旧pink-500(#ec4899)を置き換える。 */
+  --color-pink-50: #f6f9ff;
+  --color-pink-100: #ebf0ff;
+  --color-pink-200: #d1daff;
+  --color-pink-300: #b3bdff;
+  --color-pink-400: #929bf7;
+  --color-pink-500: #747bd9;
+  --color-pink-600: #595eb4;
+  --color-pink-700: #404489;
+  --color-pink-800: #292c60;
+  --color-pink-900: #151637;
+  --color-pink-950: #07081f;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* ニュートラル(暖色寄り)。旧neutral(グレー)を置き換える。 */
+  --color-neutral-50: #fbfaf9;
+  --color-neutral-100: #f4f1ef;
+  --color-neutral-200: #e2ddd9;
+  --color-neutral-300: #cac3bd;
+  --color-neutral-400: #aba39c;
+  --color-neutral-500: #8d847e;
+  --color-neutral-600: #6f6761;
+  --color-neutral-700: #524c47;
+  --color-neutral-800: #36322e;
+  --color-neutral-900: #1d1a18;
+  --color-neutral-950: #0d0b09;
+
+  /* エラー(danger)。実使用シェード(50/400/600)のみ上書きする。 */
+  --color-red-50: #f8f2f2;
+  --color-red-400: #cc7470;
+  --color-red-600: #c35c57;
+
+  /* 期限強調(warning)。実使用シェード(50/400/700)のみ上書きする。 */
+  --color-amber-50: #f9f6f1;
+  --color-amber-400: #dbb261;
+  --color-amber-700: #8d6820;
+
+  /* 角丸: 全体を1段階タイトに(sm2px/md4px/lg6px/xl8px)。既存クラスは変更しない。 */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+
+  /* シャドウ: ニュートラル(黒のみ、色味なし)・控えめな強度。 */
+  --shadow-sm: 0 1px 2px 0 oklch(0% 0 0 / 0.06);
+  --shadow-md: 0 4px 6px -1px oklch(0% 0 0 / 0.08), 0 2px 4px -2px oklch(0% 0 0 / 0.08);
+  --shadow-lg: 0 10px 15px -3px oklch(0% 0 0 / 0.1), 0 4px 6px -4px oklch(0% 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px oklch(0% 0 0 / 0.12), 0 8px 10px -6px oklch(0% 0 0 / 0.12);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/*
+ * フォーカスリング(DESIGN.md「Interaction states」focus仕様)。
+ * 個別コンポーネントにfocus:クラスが無いため、ここでキーボード操作時のみ全要素に適用する。
+ */
+:focus-visible {
+  outline: 2px solid var(--color-pink-500);
+  outline-offset: 2px;
 }

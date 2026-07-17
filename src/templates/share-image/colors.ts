@@ -7,25 +7,25 @@ import type { TripType } from "@/types/shiori";
 
 export const COLORS = {
   /** color-primary (pink-500) */
-  primary: "#ec4899",
+  primary: "#747bd9",
   /** color-primary-hover (pink-600) */
-  primaryHover: "#db2777",
+  primaryHover: "#595eb4",
   /** color-primary-soft (pink-100) */
-  primarySoft: "#fce7f3",
+  primarySoft: "#ebf0ff",
   /** color-primary-soft-text (pink-700) */
-  primarySoftText: "#be185d",
+  primarySoftText: "#404489",
   /** color-bg-app (neutral-50) */
-  bgApp: "#fafafa",
+  bgApp: "#fbfaf9",
   /** color-bg-surface (white) */
   bgSurface: "#ffffff",
   /** color-border-default (neutral-200) */
-  borderDefault: "#e5e5e5",
+  borderDefault: "#e2ddd9",
   /** color-text-primary (neutral-900) */
-  textPrimary: "#171717",
+  textPrimary: "#1d1a18",
   /** color-text-secondary (neutral-500) */
-  textSecondary: "#737373",
+  textSecondary: "#8d847e",
   /** color-text-muted (neutral-400) */
-  textMuted: "#a3a3a3",
+  textMuted: "#aba39c",
 } as const;
 
 /**

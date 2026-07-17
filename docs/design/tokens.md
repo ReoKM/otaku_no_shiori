@@ -4,48 +4,64 @@
 
 対象: `docs/design/screens/` 配下の全画面仕様。生の16進数(`#F472B6`等)は画面仕様では使わず、本ファイルのトークン名で指定する。
 
-本プロジェクトはTailwind CSS v4(`src/app/globals.css`で`@import "tailwindcss"` + `@theme inline`)を採用済み。下記トークンはTailwindの**デフォルトパレット**(neutral/pink/red/amber等)をそのまま使う運用とし、独自のtailwind.config拡張は前提にしない(将来ブランド色を追加する場合は`globals.css`の`@theme`ブロックを拡張し、本表のTailwindクラス列を更新すること)。
+本プロジェクトはTailwind CSS v4(`src/app/globals.css`で`@import "tailwindcss"` + `@theme`)を採用済み。下記トークンはTailwindの**デフォルトパレット名**(neutral/pink/red/amber等)をクラス名として使い続け、パレットの実値だけを`globals.css`の`@theme`ブロックで上書きする運用とする(独自のtailwind.config拡張はしない)。実値の変更履歴: 2026-07にパープル基調ブランド(元デザイン仕様は共有アップロードの`DESIGN.md`)へ全面リブランドした。
+
+## 0. ブランド刷新のサマリ(2026-07)
+
+- カラー: ピンク基調 → **パープル基調**(`primary-500 #747bd9`)。ニュートラルもグレー系 → 暖色系に変更
+- タイポグラフィ: Geist(見出し)+システムフォント(本文) → **Space Grotesk単一ファミリー**(見出し・本文共通)。Space GroteskはCJKグリフを含まないため、日本語部分は`system-ui, sans-serif`に自動フォールバックする(英数字・記号のみSpace Groteskで描画される)
+- 角丸: 全体を1段階タイトに変更(下記「3. 角丸トークン」参照)
+- シャドウ: 新規にトークン化(下記「7. シャドウトークン」参照)
+- 実装は`globals.css`の`@theme`でTailwindデフォルトパレット(pink/neutral/red/amber)と`radius-*`/`shadow-*`の値を上書きする方式。コンポーネント側のクラス名(`bg-pink-500`等)は変更していない
 
 ## 1. カラートークン
 
 ### 1-1. ブランド/プライマリ
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+| トークン名 | 用途 | Tailwindクラス例 | 値 |
 |---|---|---|---|
-| `color-primary` | メインCTAボタン背景、選択中タブ・チップの強調色 | `bg-pink-500` / `text-pink-500` / `border-pink-500` | #ec4899 |
-| `color-primary-hover` | プライマリボタンのhover/active/押下時 | `bg-pink-600` | #db2777 |
-| `color-primary-soft` | 選択済みチップ・バッジの背景(薄) | `bg-pink-100` | #fce7f3 |
-| `color-primary-soft-text` | `color-primary-soft` 背景上の文字 | `text-pink-700` | #be185d |
+| `color-primary` | メインCTAボタン背景、選択中タブ・チップの強調色 | `bg-pink-500` / `text-pink-500` / `border-pink-500` | #747bd9 |
+| `color-primary-hover` | プライマリボタンのhover/active/押下時 | `bg-pink-600` | #595eb4 |
+| `color-primary-soft` | 選択済みチップ・バッジの背景(薄) | `bg-pink-100` | #ebf0ff |
+| `color-primary-soft-text` | `color-primary-soft` 背景上の文字 | `text-pink-700` | #404489 |
+
+プライマリのフルスケール(`globals.css`で`pink-50`〜`pink-950`として定義): 50 `#f6f9ff` / 100 `#ebf0ff` / 200 `#d1daff` / 300 `#b3bdff` / 400 `#929bf7` / 500 `#747bd9` / 600 `#595eb4` / 700 `#404489` / 800 `#292c60` / 900 `#151637` / 950 `#07081f`。
 
 ### 1-2. ニュートラル(背景・境界・テキスト)
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+| トークン名 | 用途 | Tailwindクラス例 | 値 |
 |---|---|---|---|
-| `color-bg-app` | 画面全体の背景 | `bg-neutral-50` | #fafafa |
+| `color-bg-app` | 画面全体の背景 | `bg-neutral-50` | #fbfaf9 |
 | `color-bg-surface` | カード・入力欄・モーダルの背景 | `bg-white` | #ffffff |
-| `color-border-default` | カード枠線・入力欄の通常枠線 | `border-neutral-200` | #e5e5e5 |
-| `color-border-strong` | 入力欄フォーカス時の枠線 | `border-neutral-400` | #a3a3a3 |
-| `color-text-primary` | 本文・見出し・入力値 | `text-neutral-900` | #171717 |
-| `color-text-secondary` | 補足テキスト(日程・遠征タイプラベル等) | `text-neutral-500` | #737373 |
-| `color-text-muted` | プレースホルダー・注意書き | `text-neutral-400` | #a3a3a3 |
-| `color-text-disabled` | 無効化ボタン・無効化項目の文字 | `text-neutral-400` | #a3a3a3 |
-| `color-bg-disabled` | 無効化ボタンの背景 | `bg-neutral-200` | #e5e5e5 |
+| `color-border-default` | カード枠線・入力欄の通常枠線 | `border-neutral-200` | #e2ddd9 |
+| `color-border-strong` | 入力欄フォーカス時の枠線 | `border-neutral-400` | #aba39c |
+| `color-text-primary` | 本文・見出し・入力値 | `text-neutral-900` | #1d1a18 |
+| `color-text-secondary` | 補足テキスト(日程・遠征タイプラベル等) | `text-neutral-500` | #8d847e |
+| `color-text-muted` | プレースホルダー・注意書き | `text-neutral-400` | #aba39c |
+| `color-text-disabled` | 無効化ボタン・無効化項目の文字 | `text-neutral-400` | #aba39c |
+| `color-bg-disabled` | 無効化ボタンの背景 | `bg-neutral-200` | #e2ddd9 |
+
+ニュートラルのフルスケール(`globals.css`で`neutral-50`〜`neutral-950`として定義): 50 `#fbfaf9` / 100 `#f4f1ef` / 200 `#e2ddd9` / 300 `#cac3bd` / 400 `#aba39c` / 500 `#8d847e` / 600 `#6f6761` / 700 `#524c47` / 800 `#36322e` / 900 `#1d1a18` / 950 `#0d0b09`。
 
 ### 1-3. エラー
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+| トークン名 | 用途 | Tailwindクラス例 | 値 |
 |---|---|---|---|
-| `color-error` | エラーメッセージの文字・アイコン | `text-red-600` | #dc2626 |
-| `color-error-border` | エラー時の入力欄枠線 | `border-red-400` | #f87171 |
-| `color-error-bg` | エラー時の入力欄背景(薄) | `bg-red-50` | #fef2f2 |
+| `color-error` | エラーメッセージの文字・アイコン | `text-red-600` | #c35c57 |
+| `color-error-border` | エラー時の入力欄枠線 | `border-red-400` | #cc7470 |
+| `color-error-bg` | エラー時の入力欄背景(薄) | `bg-red-50` | #f8f2f2 |
 
 ### 1-4. 期限強調(S3b TODO用)
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+| トークン名 | 用途 | Tailwindクラス例 | 値 |
 |---|---|---|---|
-| `color-due-today-bg` | 期限当日の行の背景 | `bg-amber-50` | #fffbeb |
-| `color-due-today-border` | 期限当日の行の左枠線(強調バー) | `border-amber-400` | #fbbf24 |
-| `color-due-today-text` | 期限当日の日付文字 | `text-amber-700` | #b45309 |
+| `color-due-today-bg` | 期限当日の行の背景 | `bg-amber-50` | #f9f6f1 |
+| `color-due-today-border` | 期限当日の行の左枠線(強調バー) | `border-amber-400` | #dbb261 |
+| `color-due-today-text` | 期限当日の日付文字 | `text-amber-700` | #8d6820 |
+
+### 1-5. 未使用の意味色(将来用・仮置き)
+
+DESIGN.mdは`success` `#46944b` / `info` `#1289c7` をブランドカラーとして定義しているが、現行コードにこれらを使う箇所が無いため`globals.css`では未定義(Tailwindデフォルトの`green-*`/`sky-*`等をそのまま使う想定)。今後「成功トースト」「情報バナー」等を追加する際は、このセクションを更新してから実装すること。
 
 ### 1-5. 広告枠プレースホルダー(F9)
 
@@ -104,14 +120,18 @@ Tailwindのデフォルトspacingスケール(4pxの倍数)をそのまま使う
 
 ## 3. 角丸トークン(radius)
 
+2026-07リブランドで1段階タイトに変更(`globals.css`の`@theme`で`--radius-sm/md/lg/xl`を上書き)。クラス名は変更していない。
+
 | トークン名 | Tailwind | px | 適用対象 |
 |---|---|---|---|
-| `radius-sm` | `rounded-md` | 6px | 小さいバッジ・カウンタ |
-| `radius-md` | `rounded-lg` | 8px | ボタン・入力欄 |
-| `radius-lg` | `rounded-xl` | 12px | カード・モーダル |
+| `radius-sm` | `rounded-md` | 4px(旧6px) | 小さいバッジ・カウンタ |
+| `radius-md` | `rounded-lg` | 6px(旧8px) | ボタン・入力欄 |
+| `radius-lg` | `rounded-xl` | 8px(旧12px) | カード・モーダル |
 | `radius-full` | `rounded-full` | 完全な円/ピル | チップ・スウォッチ・アイコンボタン |
 
 ## 4. タイポグラフィトークン
+
+フォントファミリー: **Space Grotesk**単一ファミリー(見出し・本文共通、`--font-space-grotesk`)。旧Geist(見出し)+システムフォント(本文)から変更。Space GroteskはCJKグリフを含まないため、日本語の見出し・本文は`system-ui, sans-serif`に自動フォールバックする(英数字・記号のみSpace Groteskで描画される)。サイズ・行間・太さはクラス名を変更していない。
 
 | トークン名 | Tailwind | サイズ/行間 | 用途 |
 |---|---|---|---|
@@ -138,3 +158,23 @@ Tailwindのデフォルトspacingスケール(4pxの倍数)をそのまま使う
 - 基準幅: 375px(スマホ)。全画面はこの幅で崩れないことを確認する
 - 画面最大幅: PCでは`max-w-md`(448px)程度に制限し中央寄せ(左右は`color-bg-app`で余白埋め)
 - ヘッダーは画面上部に固定(`sticky top-0`)、背景`color-bg-surface`、下端に`color-border-default`の1px境界線
+
+## 7. シャドウトークン(2026-07新規)
+
+ニュートラル(黒のみ、色味なし)・控えめな強度。`globals.css`の`@theme`で`--shadow-sm/md/lg/xl`として定義し、Tailwindの`shadow-*`クラスがそのまま使える。
+
+| トークン名 | Tailwind | 用途 |
+|---|---|---|
+| `shadow-sm` | `shadow-sm` | ドロップダウン |
+| `shadow-md` | `shadow-md` | カード |
+| `shadow-lg` | `shadow-lg` | モーダル、FAB(`FabButton`) |
+| `shadow-xl` | `shadow-xl` | トースト |
+
+## 8. インタラクション状態(2026-07新規)
+
+| 状態 | ルール | 実装 |
+|---|---|---|
+| `hover` | 明度 −5% | 未適用(仮置き。既存ボタンに`hover:`クラスが無いため今回のリブランドでは追加していない。追加時は`bg-pink-600`等1段階濃いシェードを使う) |
+| `active` | 明度 −10% | 未適用(hoverと同様の理由) |
+| `focus` | `color-primary`の2px実線、2pxオフセット | 適用済み。`globals.css`の`:focus-visible`にグローバル定義(キーボード操作時のみ全要素へ適用) |
+| `disabled` | 不透明度40% | 未適用(仮置き。既存コードは`color-bg-disabled`/`color-text-disabled`という別トークンで無効化状態を表現しており、DESIGN.mdのopacity方式とは仕組みが異なる。混在を避けるため今回は既存方式を維持) |

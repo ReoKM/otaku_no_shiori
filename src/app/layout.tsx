@@ -1,16 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// 単一ファミリー(見出し・本文とも共通)。Space GroteskはCJKグリフを含まないため、
+// 日本語部分はフォントスタック(system-ui, sans-serif)に自動フォールバックする
+// (英数字・記号のみSpace Groteskで描画される)。
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
 
@@ -21,9 +19,9 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
 };
 
-// theme_colorはUIで使用しているTailwind pink-500相当(manifest.webmanifestと揃える)
+// theme_colorはUIで使用しているブランドプライマリ相当(manifest.webmanifestと揃える)
 export const viewport: Viewport = {
-  themeColor: "#f6339a",
+  themeColor: "#747bd9",
 };
 
 // 計測スタブ: NEXT_PUBLIC_GA_IDが設定されており、かつ測定IDとして妥当な形式
@@ -39,10 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="ja" className={`${spaceGrotesk.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         {children}
         <ServiceWorkerRegistration />
