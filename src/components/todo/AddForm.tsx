@@ -34,7 +34,7 @@ export function AddForm({ onAdd }: AddFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="sticky bottom-0 flex flex-col gap-2 border-t border-neutral-200 bg-white px-4 py-4"
+      className="sticky bottom-[var(--s3-tabbar-height)] flex flex-col gap-2 border-t border-neutral-200 bg-white px-4 py-4"
     >
       <input
         ref={labelInputRef}

@@ -72,3 +72,147 @@ body {
   outline: 2px solid var(--color-pink-500);
   outline-offset: 2px;
 }
+
+/*
+ * ===== S3 しおり詳細タブシェル「ノートを開く」演出(2026-07 UI刷新)=====
+ * 参照: docs/design/screens/S3_しおり詳細.md
+ * 色・影は既存トークン(--color-neutral-*, --shadow-*)のみ使用し、新トークンは追加しない。
+ */
+
+:root {
+  /*
+   * 下部固定タブバーの占有高さ(コンテンツ56px + 上境界1px + 端末セーフエリア)。
+   * TabBar.tsxのバー高さ(h-14)と一致させること。
+   * コンテンツ領域の下パディングと、タブ内sticky入力フォームのbottomオフセットで共有する。
+   */
+  --s3-tabbar-height: calc(3.5rem + 1px + env(safe-area-inset-bottom));
+}
+
+/* 下部タブバー用の上向きシャドウ(shadow-mdの上下反転相当)。 */
+.s3-tabbar {
+  box-shadow:
+    0 -4px 6px -1px oklch(0% 0 0 / 0.08),
+    0 -2px 4px -2px oklch(0% 0 0 / 0.08);
+}
+
+/*
+ * ノートの綴じリング(スパイラルノートの左端)。
+ * fixedでスクロールに追従させない。ドット列は「穴+リング」をradial-gradientの
+ * repeat-yで描き、画像アセットは使わない。ヘッダー(z-10)・タブバー(z-20)の下に潜る。
+ */
+.s3-note-binding {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  width: 1.5rem;
+  pointer-events: none;
+  border-right: 1px solid var(--color-neutral-200);
+  background-image:
+    radial-gradient(
+      circle at 50% 50%,
+      var(--color-neutral-50) 1.5px,
+      var(--color-neutral-400) 2px,
+      var(--color-neutral-400) 3px,
+      transparent 4px
+    ),
+    linear-gradient(to right, var(--color-neutral-200), var(--color-neutral-100));
+  background-size:
+    1.5rem 1.75rem,
+    auto;
+  background-repeat: repeat-y, no-repeat;
+}
+
+/*
+ * 紙(ページ)本体。
+ * - 左端(綴じ側)にだけ内側シャドウを落とし、紙が浮いている立体感を出す
+ * - 全体はshadow-mdで背景(bg-neutral-100)から浮かせる
+ * - ::afterで紙のごく薄いノイズ(インラインSVGのfeTurbulence、透過3%)と、
+ *   右端の「ページの厚み」ライン(1pxストライプ)を重ねる。画像アセットは増やさない
+ */
+.s3-paper {
+  background-color: var(--color-neutral-50);
+  box-shadow:
+    inset 12px 0 10px -10px oklch(0% 0 0 / 0.1),
+    var(--shadow-md);
+}
+
+.s3-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"),
+    linear-gradient(
+      to left,
+      var(--color-neutral-300) 0px,
+      var(--color-neutral-300) 1px,
+      transparent 1px,
+      transparent 2px,
+      var(--color-neutral-200) 2px,
+      var(--color-neutral-200) 3px,
+      transparent 3px
+    );
+  background-size:
+    128px 128px,
+    4px 100%;
+  background-position:
+    0 0,
+    100% 0;
+  background-repeat: repeat, no-repeat;
+}
+
+/*
+ * ページめくり風トランジション(軽量版)。
+ * 新しいページが移動方向から入ってくるスライド+わずかなrotateY(綴じ側=左端が軸)のみ。
+ * 本格的なページカール(Apple Books相当)は作らない(オーナー指示: 30%程度の軽さ)。
+ */
+.s3-page-turn-next,
+.s3-page-turn-prev {
+  animation-duration: 0.3s;
+  animation-timing-function: ease-out;
+  transform-origin: left center;
+}
+
+.s3-page-turn-next {
+  animation-name: s3-page-in-from-right;
+}
+
+.s3-page-turn-prev {
+  animation-name: s3-page-in-from-left;
+}
+
+@keyframes s3-page-in-from-right {
+  from {
+    opacity: 0.5;
+    transform: perspective(1200px) translateX(6%) rotateY(-5deg);
+    box-shadow: -12px 0 24px oklch(0% 0 0 / 0.15);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) translateX(0) rotateY(0deg);
+  }
+}
+
+@keyframes s3-page-in-from-left {
+  from {
+    opacity: 0.5;
+    transform: perspective(1200px) translateX(-6%) rotateY(5deg);
+    box-shadow: 12px 0 24px oklch(0% 0 0 / 0.15);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) translateX(0) rotateY(0deg);
+  }
+}
+
+/* 動きの抑制を設定しているユーザーにはアニメーションを流さない。 */
+@media (prefers-reduced-motion: reduce) {
+  .s3-page-turn-next,
+  .s3-page-turn-prev {
+    animation: none;
+  }
+}

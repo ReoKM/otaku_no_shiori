@@ -13,7 +13,8 @@ interface PackingAddFormProps {
  */
 export function PackingAddForm({ value, error, onChange, onSubmit }: PackingAddFormProps) {
   return (
-    <div className="sticky bottom-0 border-t border-neutral-200 bg-white px-4 py-4">
+    // 下部固定タブバー(--s3-tabbar-height)の上に逃がす。docs/design/screens/S3_しおり詳細.md参照
+    <div className="sticky bottom-[var(--s3-tabbar-height)] border-t border-neutral-200 bg-white px-4 py-4">
       <div className="flex items-center gap-2">
         <input
           type="text"

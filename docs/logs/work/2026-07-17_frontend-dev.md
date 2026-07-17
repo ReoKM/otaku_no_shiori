@@ -1,0 +1,42 @@
+# 2026-07-17 frontend-dev 作業ログ
+
+## S3タブシェル「ノートを開く」UI/UX刷新(PR #73続き・オーナー直接指示)
+
+- Goal: PR #73のブランチ上で、S3タブシェルに「ノートを開く」操作感(下部タブバー・スワイプ遷移・ページめくり風トランジション・綴じリング・紙質感)を優先順位どおり実装し、lint/typecheck/test/buildが通る状態でコミットする
+- 結果: 達成(指示された5項目すべて実装。ただし実機・ブラウザでの視覚確認は未実施、下記参照)
+- やったこと:
+  - 項目1 タブバーを画面下部へ(`src/components/shiori-detail/TabBar.tsx` / `layout.tsx`):
+    - `fixed inset-x-0 bottom-0` + `pb-[env(safe-area-inset-bottom)]`。z-20
+    - 意匠は汎用ボトムナビにせず「本の小口から見出しタブが覗く」形: 各タブを上角丸+枠線(下辺無し)の札形状にし、選択中タブだけ1段高く(48px)持ち上げ`bg-pink-100`/`text-pink-700`で強調。未選択は44px/`bg-neutral-100`。タップ領域44px以上維持、`aria-current="page"`付与
+    - バー占有高さをCSS変数`--s3-tabbar-height`(56px+1px+セーフエリア、`globals.css`)で共有し、コンテンツ領域の下パディング+S3a/S3bのsticky追加フォームの`bottom`オフセット(`PackingAddForm.tsx`/`todo/AddForm.tsx`の2箇所を`bottom-0`→`bottom-[var(--s3-tabbar-height)]`)に使用
+  - 項目2 左右スワイプでタブ移動(`src/lib/tab-swipe.ts` 新規 + `layout.tsx`):
+    - 判定ロジックを純関数化: `resolveTouchAxis`(10pxで縦/横軸ロック)・`detectHorizontalSwipe`(水平48px以上かつ縦成分50%以下=水平から約27度以内のみ成立)・`getAdjacentTab`(端ではnull)
+    - タブ順は`layout.tsx`の既存`TAB_IDS`を再利用(重複配列なし)。左スワイプ=次タブ、右=前タブを`router.push`
+    - 誤爆防止: 縦軸ロック後は発火しない/2本指(ピンチ)で追跡破棄/並べ替えドラッグ行(`touch-none`クラスの要素)上のタッチは対象外/touchcancelで破棄
+    - ユニットテスト `src/lib/tab-swipe.test.ts`(11件): 閾値境界・角度境界・端・不明タブ・遷移方向
+  - 項目3 ページめくり風トランジション(`layout.tsx` + `globals.css`):
+    - ライブラリ追加なし。CSS keyframes(0.3s ease-out)+紙ラッパーの`key={activeTab}`再マウントで実現
+    - 方向はレンダー中の条件付きsetState(Reactの「propsに応じたstate調整」公式パターン)+`getTabTransitionDirection`で決定。後ろのタブへ=右から、前へ=左から入る
+    - スライド6%+`perspective(1200px) rotateY(±5deg)`(綴じ側=左端が軸)+影のみ。「Apple Booksの30%」制約を厳守しページカールは作らない
+    - `prefers-reduced-motion: reduce`でアニメーション無効化
+  - 項目4 綴じリング(`globals.css` `.s3-note-binding` + `layout.tsx`):
+    - 左端24px固定(`position: fixed`、スクロール非追従、`aria-hidden`)。radial-gradientの`repeat-y`で「穴+リング」ドット列を描画(画像アセット無し)。既存`neutral-*`トークンのみ使用
+    - 紙側の左端に内側シャドウで「紙が浮いている」立体感
+  - 項目5 紙の質感(`globals.css` `.s3-paper::after`):
+    - インラインSVG `feTurbulence`ノイズ(透過3%、data URI)+右端の「ページの厚み」1pxストライプ+`shadow-md`。シェル背景を`bg-neutral-100`に落として紙(`neutral-50`)を浮かせる。すべて`pointer-events: none`
+  - ドキュメント: `docs/design/screens/S3_しおり詳細.md`にレイアウト変更+「ノート演出(2026-07 UI刷新)」節を追記。新色トークンは追加していないため`tokens.md`は変更なし
+  - 検証: `npm run lint` / `npm run typecheck` / `npm test`(328件) / `npm run build` すべて成功。`next start`でSSR HTMLに新マークアップ(s3-tabbar/s3-note-binding/s3-paper等)が出力されることをcurlで確認
+- できていないこと:
+  - 実機・ブラウザでの視覚/操作確認(375pxでの見た目、スワイプの実操作感、縦スクロールとの誤爆有無、アニメーションの質感、iOSセーフエリア)。この環境にブラウザが無いためSSRマークアップ確認まで。Netlifyプレビューデプロイでの確認が必要
+  - スワイプ時に「今のページが出ていく」exitアニメーション(入ってくる側のみ。軽量さ優先の意図的な省略)
+- 不明点・仮置き:
+  - View Transition APIは使わず素のCSS keyframes+key再マウントを選択(理由: 別ルート間遷移でも確実に動き、ブラウザ対応差・ライブラリ追加なしで「30%の軽さ」に収まるため。代替案: View Transition APIはSafari対応が広がれば移行候補)
+  - タブバーの意匠(選択中タブが1段高いインデックスタブ形状、pink-100背景)は「本の見出しタブらしさ」の解釈として仮置き。オーナーの見た目確認で調整可
+  - スワイプ除外の判定に`touch-none`クラス(並べ替え行が既に持つTailwindユーティリティ)を「独自ジェスチャー保有」のマーカーとして流用した。専用data属性を増やさないための仮置き
+  - 綴じリング幅24px・ノイズ透過3%・スライド量6%/rotateY5度などの数値は目視調整前提の仮置き
+  - シェル背景を`bg-neutral-50`→`bg-neutral-100`に変更(紙を浮かせるため。既存トークンの範囲内)
+- 成果物:
+  - 新規: `src/lib/tab-swipe.ts` `src/lib/tab-swipe.test.ts`
+  - 変更: `src/app/shiori/[id]/layout.tsx` `src/components/shiori-detail/TabBar.tsx` `src/app/globals.css` `src/components/packing/PackingAddForm.tsx` `src/components/todo/AddForm.tsx` `docs/design/screens/S3_しおり詳細.md`
+  - ブランチ`claude/design-overhaul-u480y0`に1コミット(push・PR #73更新はオーナー側で実施)
+- 作業ログ: docs/logs/work/2026-07-17_frontend-dev.md
