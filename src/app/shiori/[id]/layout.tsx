@@ -20,11 +20,13 @@ import type { Shiori } from "@/types/shiori";
  * S3 しおり詳細(タブシェル共通)。
  * 参照: docs/design/screens/S3_しおり詳細.md
  *
- * 2026-07 UI刷新(「ノートを開いている」操作感):
- * - タブバーは画面下部固定(TabBar.tsx参照)。コンテンツは`--s3-tabbar-height`分の下パディングで逃がす
+ * 2026-07 UI刷新(「ノートを開いている」操作感)+2026-07-19 v2
+ * (企画: docs/design/notes/2026-07-19_S3ノートUI-v2企画.md):
+ * - タブバーは画面下部の浮遊ピルバー(TabBar.tsx参照)。コンテンツは`--s3-tabbar-height`分の下パディングで逃がす
  * - コンテンツ左端にスパイラルノートの綴じリング(`.s3-note-binding`、fixedでスクロール非追従)
  * - コンテンツ本体は「紙」(`.s3-paper`)として浮かせ、タブ切り替え時に
- *   軽いページめくり(スライド+わずかなrotateY)アニメーションを付ける
+ *   リーフフリップ型のページめくり(出ていく紙の裏面が綴じ軸で払われる/
+ *   戻る紙が起き上がって開く。`.s3-page-turn-next`/`.s3-page-turn-prev`)を付ける
  * - コンテンツ領域の左右スワイプでタブ移動(判定ロジックは`src/lib/tab-swipe.ts`)
  */
 type LoadState = "loading" | "ready" | "not-found";

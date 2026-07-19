@@ -81,18 +81,12 @@ body {
 
 :root {
   /*
-   * 下部固定タブバーの占有高さ(コンテンツ56px + 上境界1px + 端末セーフエリア)。
-   * TabBar.tsxのバー高さ(h-14)と一致させること。
+   * 下部浮遊タブバーの占有高さ
+   * (バー本体64px + 下オフセット12px + 上の抜け余白16px + 端末セーフエリア)。
+   * TabBar.tsxのバー高さ(h-16)・下オフセット(bottom 0.75rem)と一致させること。
    * コンテンツ領域の下パディングと、タブ内sticky入力フォームのbottomオフセットで共有する。
    */
-  --s3-tabbar-height: calc(3.5rem + 1px + env(safe-area-inset-bottom));
-}
-
-/* 下部タブバー用の上向きシャドウ(shadow-mdの上下反転相当)。 */
-.s3-tabbar {
-  box-shadow:
-    0 -4px 6px -1px oklch(0% 0 0 / 0.08),
-    0 -2px 4px -2px oklch(0% 0 0 / 0.08);
+  --s3-tabbar-height: calc(4rem + 0.75rem + 1rem + env(safe-area-inset-bottom));
 }
 
 /*
@@ -166,53 +160,124 @@ body {
 }
 
 /*
- * ページめくり風トランジション(軽量版)。
- * 新しいページが移動方向から入ってくるスライド+わずかなrotateY(綴じ側=左端が軸)のみ。
- * 本格的なページカール(Apple Books相当)は作らない(オーナー指示: 30%程度の軽さ)。
+ * ページめくりトランジション v2(リーフフリップ)。
+ * 企画: docs/design/notes/2026-07-19_S3ノートUI-v2企画.md
+ * 出ていく側=「めくられた前ページ」も疑似要素で同時にアニメーションさせ、
+ * 「1枚の紙がめくれた」物語を作る。CSS(transform/box-shadow/gradient)のみで、
+ * 本格的なページカール(Apple Books/WebGL相当)は作らない(オーナー指示)。
+ *
+ * - 進む(next): 新ページは下敷きとしてごく小さく滑り込むだけ。その上を
+ *   「前ページの裏面」(::before、紙色+綴じ側の陰影)が綴じ軸のrotateYで払われていく。
+ *   backface-visibility: hiddenにより90度を超えた瞬間、自然に視界から消える
+ * - 戻る(prev): 新ページ自体が「左に倒してあった紙が起き上がって開く」動き。
+ *   回転中は綴じ側の陰影オーバーレイ(::before)を重ね、開き切ったら消す
  */
 .s3-page-turn-next,
 .s3-page-turn-prev {
-  animation-duration: 0.3s;
-  animation-timing-function: ease-out;
+  animation-duration: 0.45s;
   transform-origin: left center;
 }
 
+.s3-page-turn-next::before,
+.s3-page-turn-prev::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  /* アニメーション終了後(静止状態)は透明のまま残す */
+  opacity: 0;
+  animation-duration: 0.45s;
+}
+
+/* --- 進む(next) --- */
 .s3-page-turn-next {
-  animation-name: s3-page-in-from-right;
+  animation-name: s3-page-in-under;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* めくられていく前ページの裏面(紙色+綴じ側陰影+右端のわずかな折り返し陰影) */
+.s3-page-turn-next::before {
+  transform-origin: left center;
+  backface-visibility: hidden;
+  background:
+    linear-gradient(to right, oklch(0% 0 0 / 0.1), transparent 30%),
+    linear-gradient(to left, oklch(0% 0 0 / 0.06), transparent 20%),
+    var(--color-neutral-50);
+  animation-name: s3-page-leaf-away;
+  /* 実物の紙が倒れるほど加速する動き(ease-in系) */
+  animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0.4);
+}
+
+/* 新ページ: 紙の下から現れるので大きくは動かさない(主役はめくられる側) */
+@keyframes s3-page-in-under {
+  from {
+    opacity: 0.85;
+    transform: perspective(1200px) translateX(2.5%) rotateY(-3deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) translateX(0) rotateY(0deg);
+  }
+}
+
+@keyframes s3-page-leaf-away {
+  from {
+    opacity: 1;
+    transform: perspective(1200px) rotateY(0deg);
+    box-shadow: 16px 0 32px oklch(0% 0 0 / 0.25);
+  }
+  to {
+    /* 90度を超えるとbackface-visibility: hiddenで見えなくなる(=めくり切った) */
+    opacity: 1;
+    transform: perspective(1200px) rotateY(-100deg);
+    box-shadow: 48px 0 56px oklch(0% 0 0 / 0);
+  }
+}
+
+/* --- 戻る(prev) --- */
 .s3-page-turn-prev {
-  animation-name: s3-page-in-from-left;
+  animation-name: s3-page-flip-open;
+  /* 開き切る直前に減速する動き(ease-out系) */
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes s3-page-in-from-right {
+/*
+ * 回転中のページに落ちる綴じ側の陰影+右へ投げる飛び影。開き切るのに合わせて消える。
+ * 飛び影を要素本体でなく::beforeに持たせるのは、.s3-paperの静的box-shadow
+ * (inset混在)とはアニメーション補間できず途中で不連続にすり替わるのを避けるため。
+ */
+.s3-page-turn-prev::before {
+  background: linear-gradient(to right, oklch(0% 0 0 / 0.18), transparent 60%);
+  box-shadow: 28px 0 44px oklch(0% 0 0 / 0.28);
+  animation-name: s3-page-shade-out;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes s3-page-flip-open {
   from {
-    opacity: 0.5;
-    transform: perspective(1200px) translateX(6%) rotateY(-5deg);
-    box-shadow: -12px 0 24px oklch(0% 0 0 / 0.15);
+    transform: perspective(1200px) rotateY(-75deg);
   }
   to {
-    opacity: 1;
-    transform: perspective(1200px) translateX(0) rotateY(0deg);
+    transform: perspective(1200px) rotateY(0deg);
   }
 }
 
-@keyframes s3-page-in-from-left {
+@keyframes s3-page-shade-out {
   from {
-    opacity: 0.5;
-    transform: perspective(1200px) translateX(-6%) rotateY(5deg);
-    box-shadow: 12px 0 24px oklch(0% 0 0 / 0.15);
+    opacity: 1;
   }
   to {
-    opacity: 1;
-    transform: perspective(1200px) translateX(0) rotateY(0deg);
+    opacity: 0;
   }
 }
 
 /* 動きの抑制を設定しているユーザーにはアニメーションを流さない。 */
 @media (prefers-reduced-motion: reduce) {
   .s3-page-turn-next,
-  .s3-page-turn-prev {
+  .s3-page-turn-prev,
+  .s3-page-turn-next::before,
+  .s3-page-turn-prev::before {
     animation: none;
   }
 }
