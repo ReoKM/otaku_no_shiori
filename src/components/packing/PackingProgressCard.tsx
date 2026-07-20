@@ -36,6 +36,7 @@ export function PackingProgressCard({ total, checkedCount }: PackingProgressCard
       </div>
       <div
         role="progressbar"
+        aria-label="持ち物の準備率"
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
