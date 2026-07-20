@@ -12,6 +12,7 @@ import {
 } from "@/lib/guest-store";
 import { formatDateRange } from "@/lib/format-date";
 import { buildItineraryDayList } from "@/lib/itinerary-days";
+import { resizeImageFile } from "@/lib/photo-resize";
 import { blobToDataUrl, buildShareImageProps } from "@/lib/share-image-props";
 import { canUseWebShareFiles, isShareAbortError } from "@/lib/share-image-save";
 import { buildUgcSpotMap, resolveSpotRows } from "@/lib/spot-list";
@@ -50,6 +51,16 @@ type ScreenState =
 const EXCESS_NOTICE_DURATION_MS = 4000;
 const SHARE_IMAGE_ENDPOINT = "/api/share-image";
 const SHARE_IMAGE_FILE_NAME = "share-image.png";
+
+/**
+ * 共有画像ペイロード用の写真再縮小パラメータ。
+ * ログ保存時の写真は長辺1600px・品質0.85で、実写真だと1枚1〜2MBになる。
+ * data URL化(約1.33倍)して3枚載せるとNetlify Function側の上限
+ * (MAX_PAYLOAD_BYTES=5MB、Lambdaボディ上限6MB)を超え生成が失敗するため、
+ * 送信前に共有画像の表示解像度(テンプレ内の写真枠は最大幅952px)に合わせて縮小する。
+ */
+const SHARE_PHOTO_MAX_DIMENSION = 1080;
+const SHARE_PHOTO_JPEG_QUALITY = 0.8;
 
 export function ShareTab({ shioriId }: { shioriId: string }) {
   const router = useRouter();
@@ -169,8 +180,18 @@ export function ShareTab({ shioriId }: { shioriId: string }) {
       const selectedPhotos = selectedPhotoIds
         .map((id) => data.photos.find((photo) => photo.id === id))
         .filter((photo): photo is Photo => photo !== undefined);
+      // ペイロード上限超過を防ぐため送信前に再縮小する(定数コメント参照)。
+      // 縮小に失敗した写真は元のBlobのまま送る(従来挙動へのフォールバック)。
+      const payloadBlobs = await Promise.all(
+        selectedPhotos.map((photo) =>
+          resizeImageFile(photo.blob, {
+            maxDimension: SHARE_PHOTO_MAX_DIMENSION,
+            quality: SHARE_PHOTO_JPEG_QUALITY,
+          }).catch(() => photo.blob),
+        ),
+      );
       const photoDataUrls = (
-        await Promise.all(selectedPhotos.map((photo) => blobToDataUrl(photo.blob)))
+        await Promise.all(payloadBlobs.map((blob) => blobToDataUrl(blob)))
       ).filter((url): url is string => url !== null);
 
       const dayList = buildItineraryDayList(data.shiori.start_date, data.shiori.end_date);
