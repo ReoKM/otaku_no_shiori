@@ -31,7 +31,7 @@ export function PackingProgressCard({ total, checkedCount }: PackingProgressCard
           </p>
         </div>
         <p className="text-right text-xs text-pink-50">
-          {checkedCount} / {total} 件チェック済み
+          チェック済み {checkedCount}件 · 残り {total - checkedCount}件
         </p>
       </div>
       <div

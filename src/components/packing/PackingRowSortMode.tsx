@@ -25,7 +25,7 @@ export function PackingRowSortMode({
   return (
     <div
       ref={registerRow}
-      className={`flex min-h-14 touch-none items-center gap-2 border-b border-neutral-200 px-4 ${
+      className={`flex min-h-14 touch-none items-center gap-2 border-b border-neutral-100 px-4 ${
         isDragging ? "relative z-10 bg-white opacity-80 shadow-lg" : ""
       }`}
     >

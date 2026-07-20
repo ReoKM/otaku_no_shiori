@@ -159,6 +159,7 @@ export function PackingTab({ shioriId }: PackingTabProps) {
           <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
             <PackingToolbar
               count={items.length}
+              checkedCount={checkedCount}
               sortMode={sortMode}
               onToggleSortMode={() => setSortMode((prev) => !prev)}
             />

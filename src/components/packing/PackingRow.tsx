@@ -46,7 +46,7 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
 
   if (mode === "delete-confirm") {
     return (
-      <div className="flex min-h-14 items-center justify-between gap-2 border-b border-neutral-200 px-4">
+      <div className="flex min-h-14 items-center justify-between gap-2 border-b border-neutral-100 px-4">
         <p className="text-xs text-neutral-500">本当に削除しますか？</p>
         <div className="flex items-center gap-1">
           <button
@@ -70,7 +70,7 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
 
   if (mode === "edit") {
     return (
-      <div className="flex min-h-14 items-center gap-2 border-b border-neutral-200 px-4">
+      <div className="flex min-h-14 items-center gap-2 border-b border-neutral-100 px-4">
         <div className="min-w-0 flex-1">
           <input
             type="text"
@@ -87,7 +87,7 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
           type="button"
           aria-label="保存"
           onClick={saveEdit}
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-pink-500"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-pink-500"
         >
           ✓
         </button>
@@ -95,7 +95,7 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
           type="button"
           aria-label="編集をキャンセル"
           onClick={cancelEdit}
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100"
         >
           ×
         </button>
@@ -104,8 +104,8 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
   }
 
   return (
-    <div className="flex min-h-14 items-center gap-2 border-b border-neutral-200 px-4">
-      <label className="flex h-11 w-11 shrink-0 items-center justify-center">
+    <div className="flex min-h-14 items-center gap-2 border-b border-neutral-100 px-4 transition-colors hover:bg-neutral-50">
+      <label className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
         <input
           type="checkbox"
           checked={item.is_checked}
@@ -124,7 +124,7 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
         type="button"
         aria-label="編集"
         onClick={startEdit}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100"
       >
         ✏️
       </button>
@@ -132,7 +132,7 @@ export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: Packi
         type="button"
         aria-label="削除"
         onClick={() => setMode("delete-confirm")}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100"
       >
         🗑
       </button>
