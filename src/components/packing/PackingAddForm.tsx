@@ -13,7 +13,7 @@ interface PackingAddFormProps {
  */
 export function PackingAddForm({ value, error, onChange, onSubmit }: PackingAddFormProps) {
   return (
-    <div className="sticky bottom-0 border-t border-neutral-200 bg-white px-4 py-4">
+    <div className="sticky bottom-0 border-t border-pink-100 bg-pink-50/95 px-4 py-3 backdrop-blur">
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -27,14 +27,14 @@ export function PackingAddForm({ value, error, onChange, onSubmit }: PackingAddF
               onSubmit();
             }
           }}
-          className={`h-11 min-w-0 flex-1 rounded-lg border px-3 text-base text-neutral-900 ${
-            error ? "border-red-400 bg-red-50" : "border-neutral-200 bg-white"
+          className={`h-12 min-w-0 flex-1 rounded-xl border px-4 text-base text-neutral-900 focus:outline-none focus:ring-2 focus:ring-pink-400 ${
+            error ? "border-red-400 bg-red-50" : "border-pink-200 bg-white"
           }`}
         />
         <button
           type="button"
           onClick={onSubmit}
-          className="h-11 shrink-0 rounded-lg bg-pink-500 px-4 text-base font-semibold text-white"
+          className="h-12 shrink-0 rounded-xl bg-gradient-to-r from-pink-500 to-rose-400 px-5 text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
         >
           追加
         </button>

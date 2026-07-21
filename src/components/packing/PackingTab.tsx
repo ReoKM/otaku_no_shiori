@@ -22,6 +22,7 @@ import { PackingRowSortMode } from "./PackingRowSortMode";
 import { EmptyPacking } from "./EmptyPacking";
 import { PackingAddForm } from "./PackingAddForm";
 import { PackingListSkeleton } from "./PackingListSkeleton";
+import { PackingProgressCard } from "./PackingProgressCard";
 
 interface PackingTabProps {
   shioriId: string;
@@ -146,43 +147,55 @@ export function PackingTab({ shioriId }: PackingTabProps) {
     return <PackingListSkeleton />;
   }
 
+  const checkedCount = items.filter((item) => item.is_checked).length;
+
   return (
     <div className="flex flex-1 flex-col">
-      <PackingToolbar
-        count={items.length}
-        sortMode={sortMode}
-        onToggleSortMode={() => setSortMode((prev) => !prev)}
-      />
       <div className="flex-1 overflow-y-auto">
-        {items.length === 0 ? (
-          <EmptyPacking onAddFromTemplate={handleAddFromTemplate} />
-        ) : sortMode ? (
-          dragSort.order.map((id) => {
-            const item = items.find((i) => i.id === id);
-            if (!item) {
-              return null;
-            }
-            return (
-              <PackingRowSortMode
-                key={item.id}
-                item={item}
-                isDragging={dragSort.draggingId === item.id}
-                registerRow={dragSort.registerRow(item.id)}
-                onHandlePointerDown={dragSort.onHandlePointerDown(item.id)}
-              />
-            );
-          })
-        ) : (
-          items.map((item) => (
-            <PackingRow
-              key={item.id}
-              item={item}
-              onToggleCheck={handleToggleCheck}
-              onSaveLabel={handleSaveLabel}
-              onDelete={handleDelete}
+        <div className="flex flex-col gap-3 px-4 pt-4 pb-3">
+          {items.length > 0 && (
+            <PackingProgressCard total={items.length} checkedCount={checkedCount} />
+          )}
+          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+            <PackingToolbar
+              count={items.length}
+              checkedCount={checkedCount}
+              sortMode={sortMode}
+              onToggleSortMode={() => setSortMode((prev) => !prev)}
             />
-          ))
-        )}
+            <div className="border-t border-neutral-200 [&>*:last-child]:border-b-0">
+              {items.length === 0 ? (
+                <EmptyPacking onAddFromTemplate={handleAddFromTemplate} />
+              ) : sortMode ? (
+                dragSort.order.map((id) => {
+                  const item = items.find((i) => i.id === id);
+                  if (!item) {
+                    return null;
+                  }
+                  return (
+                    <PackingRowSortMode
+                      key={item.id}
+                      item={item}
+                      isDragging={dragSort.draggingId === item.id}
+                      registerRow={dragSort.registerRow(item.id)}
+                      onHandlePointerDown={dragSort.onHandlePointerDown(item.id)}
+                    />
+                  );
+                })
+              ) : (
+                items.map((item) => (
+                  <PackingRow
+                    key={item.id}
+                    item={item}
+                    onToggleCheck={handleToggleCheck}
+                    onSaveLabel={handleSaveLabel}
+                    onDelete={handleDelete}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
       <PackingAddForm
         value={addValue}
