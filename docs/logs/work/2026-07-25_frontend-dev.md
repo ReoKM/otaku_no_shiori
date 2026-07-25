@@ -25,3 +25,31 @@
   - ダークテーマ定義を削除した。紙テイストは明るい面前提の配色で、デザインにダーク版が無いため
   - フォントのweightは4種すべて読み込んだ(ビルド成果物のwoff2は484ファイル/計5.6MB)。`preload: false` のためユーザーが実際に取得するのは必要なunicode-rangeチャンクのみ
 - 成果物: `src/app/globals.css`、`src/app/layout.tsx`、`src/app/shiori/[id]/layout.tsx`、`src/components/shiori-detail/ShioriDetailHeader.tsx`、`src/components/shiori-detail/TabBar.tsx`、`src/components/common/BackButton.tsx`、`src/lib/use-compact-header.ts`、`public/manifest.webmanifest`、`docs/design/tokens.md`、`docs/design/screens/S3_しおり詳細.md`
+
+## 17:45 UIリニューアル(2/5) 持ち物タブ
+- Goal: 持ち物タブが採用案2aの見た目・操作(準備状況カード/ツールバー/リストカード/インライン追加/並べ替えシート/行メニュー/追従ボタン/取り消しトースト)で動き、CIが通る
+- 結果: 達成
+- やったこと:
+  - `src/lib/list-sort-mode.ts` を新規追加。並び順4モード(登録順/未完了を上に/完了済みを上に/手動)の型・ラベル・安定ソート・localStorage永続化(しおり×タブ単位)。単体テスト12件を追加
+  - 共有部品を `src/components/list-ui/` に新設: `BottomSheet` / `SortSheet` / `RowActionSheet` / `UndoToast` / `FollowFab` / `ListCheckbox` / `icons`
+  - `src/lib/use-undo-toast.ts`(5秒で自動クローズ)、`src/lib/use-follow-fab.ts`(末尾の追加行が画面外のときだけ表示)を新規追加
+  - `PackingProgressCard` をピンクのグラデーションカードからフラットな枠線カードへ差し替え(「n／m完了　残りn件」+10pxバー)
+  - `PackingAllDoneBanner` を新規追加(全件チェック済みのときだけ表示)
+  - `PackingToolbar` をリストカードの外へ出し、「完了済みを隠す/表示」を追加。「並べ替え」はシートを開く形に変更
+  - `PackingRow` を68px行に作り直し。行の左側全体を完了トグルにし、編集・削除は行右端の「…」→`RowActionSheet` に集約
+  - `PackingAddForm` を画面下固定からリストカード末尾のインライン追加へ変更。重複警告・Enter連続入力・Escapeで閉じるに対応
+  - `EmptyPacking` を破線カードに変更し、主CTAを「＋ 最初の持ち物を追加」、副導線を「テンプレから追加」に整理
+  - `PackingRowSortMode` / `PackingListSkeleton` を新トークンで作り直し
+  - Playwright(Chromium/390×800)で実機相当の目視確認を実施。通常表示・スクロール時のコンパクトヘッダー・並べ替えシート・行メニュー・全件完了・完了済みを隠す・インライン追加と重複警告・削除と取り消しトースト・手動並べ替え・並び順のリロード復元・空状態の11状態を確認。コンソールエラー/ページエラーなし
+  - `docs/design/screens/S3a_持ち物.md` のレイアウト・コンポーネント構造・状態・タップ挙動・文言一覧を全面更新
+- できていないこと:
+  - やること・旅程・記録タブは未着手(3/5〜5/5で対応)
+  - 追加した共有部品(`list-ui/`)とフック2種に単体テストが無い。DOM前提のためテスト環境がnodeのままでは書けず、jsdom導入の可否を判断していない。ロジックのある `list-sort-mode.ts` のみテスト済み
+  - `useFollowFab` / `useCompactHeader` のスクロール判定を実機のiOS Safari(アドレスバー伸縮あり)で確認していない
+- 不明点・仮置き:
+  - 削除の取り消しは「同じ名前で作り直す」実装のため、**元の位置ではなく末尾に戻る**。guest-storeに任意位置への挿入APIが無いための仮置き
+  - 「完了済みを隠す」の状態は保存していない(タブを開き直すと表示に戻る)。並び順モードのみ永続化した
+  - 同名の持ち物は警告を出すが登録は妨げない仕様にした(同じ物を複数持つ場合があるため)
+  - 「手動で並べ替え」を選ぶと「完了済みを隠す」を強制OFFに戻す(隠れた行を巻き込んで並べ替えるのを防ぐため)
+  - 空状態でツールバーの「まだ登録がありません」と空カードの「持ち物はまだありません」が二重に出る。デザイン案どおりの構成だが冗長。整理するかは要判断
+- 成果物: `src/lib/list-sort-mode.ts`(+テスト)、`src/lib/use-undo-toast.ts`、`src/lib/use-follow-fab.ts`、`src/components/list-ui/`(7ファイル)、`src/components/packing/`(8ファイル)、`docs/design/screens/S3a_持ち物.md`

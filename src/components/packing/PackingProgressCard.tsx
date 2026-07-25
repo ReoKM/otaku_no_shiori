@@ -4,35 +4,29 @@ interface PackingProgressCardProps {
 }
 
 /**
- * S3a 準備率ヒーローカード。
- * チェック済み件数から準備率(%)を算出し、プログレスバーと合わせて表示する。
- * 忘れ物防止の声かけ文言は準備率に応じて切り替える。
+ * S3a 準備状況カード。
+ * 参照: docs/design/screens/S3a_持ち物.md「準備状況カード」
+ *
+ * 「n／m完了　残りn件」と進捗バーの2要素だけに絞る。
  */
 export function PackingProgressCard({ total, checkedCount }: PackingProgressCardProps) {
   const percent = total === 0 ? 0 : Math.round((checkedCount / total) * 100);
-  const message =
-    percent === 100
-      ? "準備完了!忘れ物なしで遠征に出発!"
-      : percent >= 50
-        ? "あと少し!出発前にもう一度チェック"
-        : "チェックして忘れ物ゼロの遠征に";
+  const remaining = total - checkedCount;
 
   return (
     <section
       aria-label="持ち物の準備状況"
-      className="rounded-xl bg-gradient-to-r from-pink-500 to-rose-400 px-4 py-4 text-white"
+      className="rounded-2xl border border-paper-border bg-paper-surface px-4 py-3.5"
     >
-      <div className="flex items-end justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-medium text-pink-100">遠征の準備率</p>
-          <p className="mt-0.5 text-2xl font-bold">
-            {percent}
-            <span className="ml-0.5 text-base font-semibold">%</span>
-          </p>
-        </div>
-        <p className="text-right text-xs text-pink-50">
-          チェック済み {checkedCount}件 · 残り {total - checkedCount}件
-        </p>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[13px] font-bold tracking-[0.04em] text-ink-label">準備状況</span>
+        <span
+          className={`text-[13px] font-medium ${
+            checkedCount > 0 ? "text-sakura-ink" : "text-ink-sub"
+          }`}
+        >
+          {total === 0 ? "登録0件" : `${checkedCount}／${total}完了　残り${remaining}件`}
+        </span>
       </div>
       <div
         role="progressbar"
@@ -40,14 +34,13 @@ export function PackingProgressCard({ total, checkedCount }: PackingProgressCard
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        className="mt-3 h-2 overflow-hidden rounded-full bg-white/30"
+        className="mt-2.5 box-border h-2.5 overflow-hidden rounded-full border border-paper-track-border bg-paper-track"
       >
         <div
-          className="h-full rounded-full bg-white transition-[width] duration-300"
+          className="h-full rounded-full bg-sakura transition-[width] duration-300"
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="mt-2 text-xs text-pink-50">{message}</p>
     </section>
   );
 }
