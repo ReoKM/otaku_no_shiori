@@ -1,171 +1,76 @@
-/**
- * S3b TodoRow(通常モード/編集中/削除確認中の1行)。
- * 参照: docs/design/screens/S3b_TODO.md「TodoRow(通常モード)」「TodoRow(編集中)」「TodoRow(削除確認中)」
- */
-import { formatDueDate } from "@/lib/todo-sort";
-import { TODO_LABEL_MAX_LENGTH } from "@/lib/todo-validation";
-import type { Todo } from "@/types/shiori";
+"use client";
 
-export type TodoRowMode = "view" | "edit" | "delete";
+/**
+ * S3b TodoRow(やることリストの1行、高さ68px)。
+ * 参照: docs/design/screens/S3b_TODO.md「TodoRow」
+ *
+ * 持ち物の`PackingRow`と同じ構造に、期限日の1行を足したもの。
+ * 行の左側全体が完了トグル、名前の編集・期限変更・削除は右端の「…」から開くシートで行う。
+ */
+import { ListCheckbox } from "@/components/list-ui/ListCheckbox";
+import { MoreIcon } from "@/components/list-ui/icons";
+import { formatDueDate } from "@/lib/todo-sort";
+import type { Todo } from "@/types/shiori";
 
 interface TodoRowProps {
   item: Todo;
-  mode: TodoRowMode;
+  /** 期限が今日の未完了項目は行を強調する。 */
   dueToday: boolean;
+  /** 追加直後の行はハイライトを一度だけ流す。 */
+  flash: boolean;
   onToggleDone: () => void;
-  onStartEdit: () => void;
-  onStartDelete: () => void;
-
-  editLabel: string;
-  editDueDate: string;
-  editError: string | null;
-  onEditLabelChange: (value: string) => void;
-  onEditDueDateChange: (value: string) => void;
-  onClearEditDueDate: () => void;
-  onSaveEdit: () => void;
-  onCancelEdit: () => void;
-
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
+  onOpenMenu: () => void;
 }
 
-export function TodoRow({
-  item,
-  mode,
-  dueToday,
-  onToggleDone,
-  onStartEdit,
-  onStartDelete,
-  editLabel,
-  editDueDate,
-  editError,
-  onEditLabelChange,
-  onEditDueDateChange,
-  onClearEditDueDate,
-  onSaveEdit,
-  onCancelEdit,
-  onConfirmDelete,
-  onCancelDelete,
-}: TodoRowProps) {
-  const highlightClass = dueToday
-    ? "border-l-4 border-amber-400 bg-amber-50"
-    : "border-l-4 border-transparent";
-
-  if (mode === "edit") {
-    return (
-      <div className={`flex min-h-14 flex-col gap-2 px-4 py-3 ${highlightClass}`}>
-        <input
-          type="text"
-          value={editLabel}
-          maxLength={TODO_LABEL_MAX_LENGTH}
-          onChange={(e) => onEditLabelChange(e.target.value)}
-          className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
-        />
-        {editError && <p className="text-xs text-red-600">{editError}</p>}
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={editDueDate}
-            onChange={(e) => onEditDueDateChange(e.target.value)}
-            className="h-11 flex-1 rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
-          />
-          {editDueDate && (
-            <button type="button" onClick={onClearEditDueDate} className="text-xs text-neutral-500 underline">
-              期限を削除
-            </button>
-          )}
-        </div>
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            aria-label="保存"
-            onClick={onSaveEdit}
-            className="flex h-11 w-11 items-center justify-center text-lg text-pink-500"
-          >
-            ✓
-          </button>
-          <button
-            type="button"
-            aria-label="編集をキャンセル"
-            onClick={onCancelEdit}
-            className="flex h-11 w-11 items-center justify-center text-lg text-neutral-500"
-          >
-            ×
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === "delete") {
-    return (
-      <div className={`flex min-h-14 items-center justify-between gap-2 px-4 ${highlightClass}`}>
-        <p className="text-xs text-neutral-700">本当に削除しますか？</p>
-        <div className="flex shrink-0 gap-2">
-          <button
-            type="button"
-            onClick={onConfirmDelete}
-            className="h-11 px-3 text-sm font-semibold text-red-600"
-          >
-            削除
-          </button>
-          <button type="button" onClick={onCancelDelete} className="h-11 px-3 text-sm text-neutral-500">
-            キャンセル
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+export function TodoRow({ item, dueToday, flash, onToggleDone, onOpenMenu }: TodoRowProps) {
   return (
-    <div className={`flex min-h-14 items-center gap-2 px-4 ${highlightClass}`}>
+    <div
+      className={`flex min-h-17 items-center border-t border-paper-divider first:border-t-0 ${
+        dueToday ? "border-l-4 border-l-amber-400 bg-amber-50" : "bg-paper-surface"
+      } ${flash ? "animate-[paper-flash_1.2s_ease]" : ""}`}
+    >
       <button
         type="button"
         role="checkbox"
         aria-checked={item.is_done}
-        aria-label={item.is_done ? "未完了に戻す" : "完了にする"}
         onClick={onToggleDone}
-        className="flex h-11 w-11 shrink-0 items-center justify-center"
+        className="flex min-h-17 min-w-0 flex-1 items-center gap-3 py-1.5 pl-4 text-left"
       >
-        <span
-          className={`flex h-5 w-5 items-center justify-center rounded border ${
-            item.is_done ? "border-pink-500 bg-pink-500 text-white" : "border-neutral-400"
-          }`}
-          aria-hidden="true"
-        >
-          {item.is_done ? "✓" : ""}
+        <ListCheckbox checked={item.is_done} />
+        <span className="min-w-0 flex-1">
+          <span
+            className={`line-clamp-2 block text-base/[1.4] ${
+              item.is_done ? "font-normal text-ink-done line-through" : "font-medium text-ink"
+            }`}
+          >
+            {item.label}
+          </span>
+          {item.due_date && (
+            <span
+              className={`mt-0.5 block text-xs font-medium ${
+                item.is_done
+                  ? "text-ink-faint"
+                  : dueToday
+                    ? "text-amber-700"
+                    : "text-ink-muted"
+              }`}
+            >
+              期限 {formatDueDate(item.due_date)}
+              {dueToday && "・今日"}
+            </span>
+          )}
         </span>
-      </button>
-      <div className="min-w-0 flex-1">
-        <p
-          className={`text-base ${
-            item.is_done ? "text-neutral-400 line-through" : "text-neutral-900"
-          }`}
-        >
-          {item.label}
-        </p>
-        {item.due_date && (
-          <p className={`text-sm ${dueToday ? "text-amber-700" : "text-neutral-500"}`}>
-            {formatDueDate(item.due_date)}
-            {dueToday ? "(今日)" : ""}
-          </p>
+        {item.is_done && (
+          <span className="flex-none text-[11px] font-bold tracking-[0.06em] text-ink-faint">済</span>
         )}
-      </div>
-      <button
-        type="button"
-        aria-label="編集"
-        onClick={onStartEdit}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
-      >
-        ✎
       </button>
       <button
         type="button"
-        aria-label="削除"
-        onClick={onStartDelete}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
+        aria-label={`${item.label}の編集・削除`}
+        onClick={onOpenMenu}
+        className="flex h-11 w-11 flex-none items-center justify-center text-ink-faint"
       >
-        🗑
+        <MoreIcon />
       </button>
     </div>
   );

@@ -5,48 +5,62 @@
  * 選択値はしおり×タブ単位でlocalStorageに保存する。DBスキーマを変更しないための実装判断
  * (ゲスト利用が前提のため端末をまたぐ同期は行わない)。
  */
-export type ListSortMode = "registered" | "undone-first" | "done-first" | "manual";
-
-export const LIST_SORT_MODES: ListSortMode[] = [
-  "registered",
-  "undone-first",
-  "done-first",
-  "manual",
-];
+export type ListSortMode =
+  | "due-soon"
+  | "registered"
+  | "undone-first"
+  | "done-first"
+  | "manual";
 
 export const LIST_SORT_MODE_LABELS: Record<ListSortMode, string> = {
+  "due-soon": "期限が近い順",
   registered: "登録順",
   "undone-first": "未完了を上に",
   "done-first": "完了済みを上に",
   manual: "手動で並べ替え",
 };
 
-export const DEFAULT_LIST_SORT_MODE: ListSortMode = "registered";
-
 /** 並び順モードを保存するタブの識別子。 */
 export type SortableTab = "packing" | "todo";
+
+/**
+ * タブごとに選べる並び順。
+ *
+ * 「期限が近い順」はやることタブ限定。`docs/01_service_spec.md` のF3が
+ * 「期限が近い順に表示」を求めているため、リニューアル後も既定の並びとして残す
+ * (デザイン案の4択には無いが、仕様上の機能を落とさないための追加)。
+ * 持ち物には期限が無いので出さない。
+ */
+export const SORT_MODES_BY_TAB: Record<SortableTab, ListSortMode[]> = {
+  packing: ["registered", "undone-first", "done-first", "manual"],
+  todo: ["due-soon", "registered", "undone-first", "done-first", "manual"],
+};
+
+/** タブごとの既定の並び順。 */
+export const DEFAULT_SORT_MODE_BY_TAB: Record<SortableTab, ListSortMode> = {
+  packing: "registered",
+  todo: "due-soon",
+};
 
 function storageKey(shioriId: string, tab: SortableTab): string {
   return `shiori-sort:${tab}:${shioriId}`;
 }
 
-function isListSortMode(value: unknown): value is ListSortMode {
-  return typeof value === "string" && (LIST_SORT_MODES as string[]).includes(value);
-}
-
 /**
- * 保存済みの並び順モードを読み出す。未保存・不正値・localStorage利用不可(プライベート
- * ブラウジング等)の場合は既定値「登録順」を返す。
+ * 保存済みの並び順モードを読み出す。未保存・不正値・そのタブで選べないモード・
+ * localStorage利用不可(プライベートブラウジング等)の場合はタブごとの既定値を返す。
  */
 export function loadListSortMode(shioriId: string, tab: SortableTab): ListSortMode {
+  const fallback = DEFAULT_SORT_MODE_BY_TAB[tab];
   if (typeof window === "undefined") {
-    return DEFAULT_LIST_SORT_MODE;
+    return fallback;
   }
   try {
     const raw = window.localStorage.getItem(storageKey(shioriId, tab));
-    return isListSortMode(raw) ? raw : DEFAULT_LIST_SORT_MODE;
+    const allowed = SORT_MODES_BY_TAB[tab] as string[];
+    return raw !== null && allowed.includes(raw) ? (raw as ListSortMode) : fallback;
   } catch {
-    return DEFAULT_LIST_SORT_MODE;
+    return fallback;
   }
 }
 
@@ -69,7 +83,9 @@ export function saveListSortMode(
 /**
  * 並び順モードに従って一覧を並べ替える。元配列は変更しない。
  *
- * 「登録順」と「手動で並べ替え」は呼び出し側が渡した順序(sort_order順)をそのまま使う。
+ * 「登録順」「手動で並べ替え」「期限が近い順」は呼び出し側が渡した順序をそのまま使う。
+ * 「期限が近い順」の並べ替えは期限日を知っている呼び出し側(やることタブ)が
+ * 事前に済ませてから渡す(`src/lib/todo-sort.ts`の`sortTodos`)。
  * 完了状態での並べ替えは安定ソートで行い、同じ完了状態の中では元の順序を保つ。
  */
 export function applyListSortMode<T>(

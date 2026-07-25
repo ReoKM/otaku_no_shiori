@@ -1,84 +1,105 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { PlusIcon } from "@/components/list-ui/icons";
 import { TODO_LABEL_MAX_LENGTH, validateTodoLabel } from "@/lib/todo-validation";
 
 interface AddFormProps {
-  onAdd: (label: string, dueDate: string | null) => void;
+  /** 入力欄を開いているか。閉じているときは「やることを追加」行を出す。 */
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onAdd: (label: string) => void;
 }
 
 /**
- * S3b AddForm(手動追加フォーム)。
- * 参照: docs/design/screens/S3b_TODO.md「AddForm(手動追加フォーム)」
+ * S3b AddForm(リスト末尾のインライン追加行)。
+ * 参照: docs/design/screens/S3b_TODO.md「AddForm(インライン追加)」
+ *
+ * 画面下に固定していた旧フォームをやめ、リストカードの末尾に置く。
+ * 期限は登録後に行メニューから設定する形にして、追加時の入力を名前1つに絞る
+ * (遠征前に思いついた順でどんどん足せるようにするため)。
  */
-export function AddForm({ onAdd }: AddFormProps) {
+export function AddForm({ open, onOpen, onClose, onAdd }: AddFormProps) {
   const [label, setLabel] = useState("");
-  const [dueDate, setDueDate] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const labelInputRef = useRef<HTMLInputElement>(null);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleSubmit() {
     const validationError = validateTodoLabel(label);
     if (validationError) {
       setError(validationError);
       return;
     }
-    onAdd(label.trim(), dueDate || null);
+    onAdd(label.trim());
     setLabel("");
-    setDueDate("");
     setError(null);
-    labelInputRef.current?.focus();
+  }
+
+  function handleClose() {
+    setLabel("");
+    setError(null);
+    onClose();
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-h-15 w-full items-center gap-2 border-t border-paper-divider bg-paper-surface px-4 text-left text-[15px] font-bold text-sakura-ink"
+      >
+        <PlusIcon />
+        やることを追加
+      </button>
+    );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="sticky bottom-0 flex flex-col gap-2 border-t border-neutral-200 bg-white px-4 py-4"
-    >
+    <div className="border-t border-paper-divider bg-sakura-tint px-4 pt-3 pb-4">
       <input
-        ref={labelInputRef}
         type="text"
         value={label}
         maxLength={TODO_LABEL_MAX_LENGTH}
-        placeholder="例: チケット当落確認"
-        onChange={(e) => {
-          setLabel(e.target.value);
+        placeholder="例:チケット当落確認"
+        autoFocus
+        aria-label="追加するやることの名前"
+        onChange={(event) => {
+          setLabel(event.target.value);
           if (error) {
             setError(null);
           }
         }}
-        className={`h-11 w-full rounded-lg border bg-white px-3 text-base text-neutral-900 ${
-          error ? "border-red-400" : "border-neutral-200"
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            handleSubmit();
+          }
+          if (event.key === "Escape") {
+            handleClose();
+          }
+        }}
+        className={`min-h-12 w-full rounded-xl border-[1.5px] bg-white px-3.5 text-base font-medium text-ink outline-none ${
+          error ? "border-red-400" : "border-sakura-field"
         }`}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      <div className="flex items-center gap-2">
-        <input
-          type="date"
-          value={dueDate}
-          aria-label="期限日(任意)"
-          placeholder="期限日(任意)"
-          onChange={(e) => setDueDate(e.target.value)}
-          className="h-11 flex-1 rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
-        />
-        {dueDate && (
-          <button
-            type="button"
-            aria-label="期限日をクリア"
-            onClick={() => setDueDate("")}
-            className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
-          >
-            ×
-          </button>
-        )}
+      <div className="mt-2.5 flex gap-2">
         <button
-          type="submit"
-          className="h-11 shrink-0 rounded-lg bg-pink-500 px-4 text-base font-semibold text-white"
+          type="button"
+          onClick={handleClose}
+          className="min-h-11.5 flex-none rounded-xl border border-paper-dashed bg-white px-4.5 text-sm font-medium text-ink-label"
         >
-          追加
+          キャンセル
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="min-h-11.5 flex-1 rounded-xl bg-sakura text-[15px] font-bold text-white"
+        >
+          登録する
         </button>
       </div>
-    </form>
+      {error && <p className="mt-2.5 text-[12.5px] font-medium text-red-600">{error}</p>}
+      <p className="mt-2.5 text-xs text-ink-muted">期限は登録後に行から設定できます</p>
+    </div>
   );
 }

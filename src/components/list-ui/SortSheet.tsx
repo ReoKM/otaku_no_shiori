@@ -1,27 +1,25 @@
 "use client";
 
-import {
-  LIST_SORT_MODES,
-  LIST_SORT_MODE_LABELS,
-  type ListSortMode,
-} from "@/lib/list-sort-mode";
+import { LIST_SORT_MODE_LABELS, type ListSortMode } from "@/lib/list-sort-mode";
 import { BottomSheet } from "./BottomSheet";
 
 interface SortSheetProps {
+  /** このタブで選べる並び順(`SORT_MODES_BY_TAB`から渡す)。 */
+  modes: readonly ListSortMode[];
   current: ListSortMode;
   onPick: (mode: ListSortMode) => void;
   onClose: () => void;
 }
 
 /**
- * 並べ替えシート(登録順 / 未完了を上に / 完了済みを上に / 手動で並べ替え)。
+ * 並べ替えシート。選択肢はタブごとに異なる(`SORT_MODES_BY_TAB`)。
  * 参照: docs/design/screens/S3a_持ち物.md「並べ替えシート」
  */
-export function SortSheet({ current, onPick, onClose }: SortSheetProps) {
+export function SortSheet({ modes, current, onPick, onClose }: SortSheetProps) {
   return (
     <BottomSheet title="並べ替え" onClose={onClose}>
       <div className="flex flex-col">
-        {LIST_SORT_MODES.map((mode) => {
+        {modes.map((mode) => {
           const selected = mode === current;
           return (
             <button

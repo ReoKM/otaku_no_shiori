@@ -15,9 +15,10 @@ import {
 } from "@/lib/guest-store";
 import {
   applyListSortMode,
-  DEFAULT_LIST_SORT_MODE,
+  DEFAULT_SORT_MODE_BY_TAB,
   loadListSortMode,
   saveListSortMode,
+  SORT_MODES_BY_TAB,
   type ListSortMode,
 } from "@/lib/list-sort-mode";
 import { PACKING_LABEL_MAX_LENGTH, validatePackingLabel } from "@/lib/packing-validation";
@@ -56,7 +57,7 @@ export function PackingTab({ shioriId }: PackingTabProps) {
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
   const [tripType, setTripType] = useState<TripType>("other");
   const [items, setItems] = useState<PackingItem[]>([]);
-  const [sortMode, setSortMode] = useState<ListSortMode>(DEFAULT_LIST_SORT_MODE);
+  const [sortMode, setSortMode] = useState<ListSortMode>(DEFAULT_SORT_MODE_BY_TAB.packing);
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [showDone, setShowDone] = useState(true);
   const [menuTarget, setMenuTarget] = useState<PackingItem | null>(null);
@@ -246,7 +247,7 @@ export function PackingTab({ shioriId }: PackingTabProps) {
         onToggleShowDone={() => setShowDone((prev) => !prev)}
         onOpenSortSheet={() => setSortSheetOpen(true)}
         manualSortMode={manualSortMode}
-        onExitManualSort={() => handlePickSortMode(DEFAULT_LIST_SORT_MODE)}
+        onExitManualSort={() => handlePickSortMode(DEFAULT_SORT_MODE_BY_TAB.packing)}
       />
 
       {!hasList ? (
@@ -319,6 +320,7 @@ export function PackingTab({ shioriId }: PackingTabProps) {
 
       {sortSheetOpen && (
         <SortSheet
+          modes={SORT_MODES_BY_TAB.packing}
           current={sortMode}
           onPick={handlePickSortMode}
           onClose={() => setSortSheetOpen(false)}
