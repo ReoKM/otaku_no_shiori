@@ -6,6 +6,7 @@ import { ShioriDetailHeader } from "@/components/shiori-detail/ShioriDetailHeade
 import { TabBar, type ShioriTabId } from "@/components/shiori-detail/TabBar";
 import { formatDateRange } from "@/lib/format-date";
 import { getShiori } from "@/lib/guest-store";
+import { useCompactHeader } from "@/lib/use-compact-header";
 import type { Shiori } from "@/types/shiori";
 
 /**
@@ -30,6 +31,7 @@ export default function ShioriDetailLayout({ children }: { children: React.React
   const shioriId = params.id;
   const pathname = usePathname();
   const router = useRouter();
+  const compact = useCompactHeader();
 
   // ロード結果を「どのidのものか」ごと保持する。
   // 別のしおりidへ遷移した直後は loaded.id !== shioriId となりローディング表示に戻るため、
@@ -85,22 +87,26 @@ export default function ShioriDetailLayout({ children }: { children: React.React
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
-      <ShioriDetailHeader
-        loading={state === "loading"}
-        title={state === "not-found" ? "しおりが見つかりません" : (shiori?.title ?? "")}
-        dateRange={dateRange}
-        shareHref={state === "ready" ? `/shiori/${shioriId}/share` : undefined}
-      />
-      <TabBar shioriId={shioriId} activeTab={activeTab} disabled={state === "loading"} />
+    <div className="flex min-h-full flex-1 flex-col bg-paper">
+      {/* ヘッダーとタブは1つのstickyブロックにまとめ、スクロール中もタブが常に見える状態を保つ */}
+      <div className="sticky top-0 z-30 bg-paper-surface">
+        <ShioriDetailHeader
+          loading={state === "loading"}
+          title={state === "not-found" ? "しおりが見つかりません" : (shiori?.title ?? "")}
+          dateRange={dateRange}
+          shareHref={state === "ready" ? `/shiori/${shioriId}/share` : undefined}
+          compact={compact}
+        />
+        <TabBar shioriId={shioriId} activeTab={activeTab} disabled={state === "loading"} />
+      </div>
       <div className="flex flex-1 flex-col">
         {state === "not-found" ? (
-          <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-            <p className="text-red-600">このしおりは見つかりませんでした</p>
+          <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
+            <p className="text-ink-sub">このしおりは見つかりませんでした</p>
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="h-11 rounded-lg border border-pink-500 px-4 text-pink-500"
+              className="h-12 rounded-btn border border-sakura-border bg-paper-surface px-5 text-[15px] font-bold text-sakura-ink"
             >
               一覧に戻る
             </button>

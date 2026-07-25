@@ -30,11 +30,21 @@ export function BackButton({ href, fallbackHref }: { href?: string; fallbackHref
         }
         router.back();
       }}
-      className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-900"
+      className="-ml-2.5 flex h-11 w-11 shrink-0 items-center justify-center text-ink-strong"
     >
-      <span aria-hidden="true" className="text-xl leading-none">
-        ‹
-      </span>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M11.5 3.5 5.5 9l6 5.5" />
+      </svg>
     </button>
   );
 }

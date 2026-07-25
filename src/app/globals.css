@@ -1,26 +1,96 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * 遠征しおり デザイントークン(紙テイスト / フラット案)。
+ * 参照: docs/design/tokens.md
+ *
+ * 全色をここで定義し、画面側では生の16進数を書かずTailwindユーティリティ
+ * (bg-paper-surface / text-ink-sub / border-paper-divider 等)で参照する。
+ * 紙テイストは明るい面を前提にした配色のため、ダークテーマは持たない。
+ */
+@theme {
+  /* 面(紙) */
+  --color-paper: #fdfbf7;
+  --color-paper-surface: #fffdf8;
+  --color-paper-border: #e6e1d9;
+  --color-paper-divider: #eee8de;
+  --color-paper-dashed: #dcd5c8;
+  --color-paper-track: #ebe5da;
+  --color-paper-track-border: #ded7ca;
+  --color-paper-flash: #fff4da;
+
+  /* 文字(インク) */
+  --color-ink: #2a2521;
+  --color-ink-strong: #3b342e;
+  --color-ink-label: #5c534a;
+  --color-ink-sub: #6f665c;
+  --color-ink-muted: #8c8378;
+  --color-ink-done: #a79e93;
+  --color-ink-faint: #beb5a8;
+
+  /* 差し色(桜) */
+  --color-sakura: #d6146f;
+  --color-sakura-ink: #b01260;
+  --color-sakura-soft: #fdeef5;
+  --color-sakura-tint: #fff7fb;
+  --color-sakura-border: #efc3d9;
+  --color-sakura-field: #e4a0c2;
+  --color-sakura-undo: #ff9bc8;
+
+  /* 角丸(Tailwind既定に無い中間値のみ追加) */
+  --radius-btn: 14px;
+
+  /* フォント */
+  --font-sans:
+    var(--font-zen-kaku), system-ui, -apple-system, "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP", sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 行追加直後のハイライト(1.2秒でフェード) */
+@keyframes paper-flash {
+  from {
+    background-color: var(--color-paper-flash);
+  }
+  to {
+    background-color: var(--color-paper-surface);
+  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ボトムシートのせり上がり */
+@keyframes paper-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* トースト・追従ボタンの出現 */
+@keyframes paper-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
