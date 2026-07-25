@@ -22,14 +22,14 @@ export function EntryRowSortMode({
   onMoveDown,
 }: EntryRowSortModeProps) {
   return (
-    <div className="flex min-h-14 items-center gap-2 px-4">
+    <div className="flex min-h-16 items-center gap-2 border-t border-paper-divider bg-paper-surface px-4 first:border-t-0">
       <button
         type="button"
         aria-label="上へ移動"
         disabled={!canMoveUp}
         onClick={onMoveUp}
-        className={`flex h-11 w-11 shrink-0 items-center justify-center text-lg ${
-          canMoveUp ? "text-neutral-900" : "bg-neutral-200 text-neutral-400"
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg ${
+          canMoveUp ? "text-ink-strong" : "bg-paper-track text-ink-faint"
         }`}
       >
         ↑
@@ -39,13 +39,13 @@ export function EntryRowSortMode({
         aria-label="下へ移動"
         disabled={!canMoveDown}
         onClick={onMoveDown}
-        className={`flex h-11 w-11 shrink-0 items-center justify-center text-lg ${
-          canMoveDown ? "text-neutral-900" : "bg-neutral-200 text-neutral-400"
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-lg ${
+          canMoveDown ? "text-ink-strong" : "bg-paper-track text-ink-faint"
         }`}
       >
         ↓
       </button>
-      <p className="min-w-0 flex-1 truncate text-base text-neutral-900">{entry.title}</p>
+      <p className="min-w-0 flex-1 truncate text-base font-medium text-ink">{entry.title}</p>
     </div>
   );
 }

@@ -48,16 +48,19 @@ export function AddEntryForm({ onSave, onCancel }: AddEntryFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 px-4 py-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-paper-divider bg-sakura-tint px-4 py-3.5">
+      <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">時刻(任意)</span>
       <input
         type="time"
         value={time}
         aria-label="時刻(任意)"
         onChange={(e) => setTime(e.target.value)}
-        className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+        className="min-h-12 w-full rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
       />
+      <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">予定名</span>
       <input
         ref={titleInputRef}
+        aria-label="予定名"
         type="text"
         value={title}
         maxLength={ITINERARY_TITLE_MAX_LENGTH}
@@ -68,36 +71,44 @@ export function AddEntryForm({ onSave, onCancel }: AddEntryFormProps) {
             setError(null);
           }
         }}
-        className={`h-11 w-full rounded-lg border bg-white px-3 text-base text-neutral-900 ${
-          error ? "border-red-400" : "border-neutral-200"
+        className={`min-h-12 w-full rounded-xl border-[1.5px] bg-white px-3.5 text-base font-medium text-ink outline-none ${
+          error ? "border-red-400" : "border-sakura-field"
         }`}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+      <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">場所(任意)</span>
       <input
         type="text"
+        aria-label="場所"
         value={placeName}
         maxLength={ITINERARY_PLACE_NAME_MAX_LENGTH}
         placeholder="例: 東京ビッグサイト"
         onChange={(e) => setPlaceName(e.target.value)}
-        className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+        className="min-h-12 w-full rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
       />
+      <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">メモ(任意)</span>
       <textarea
+        aria-label="メモ"
         value={memo}
         maxLength={ITINERARY_MEMO_MAX_LENGTH}
         placeholder="例: 開場30分前に到着"
         onChange={(e) => setMemo(e.target.value)}
         rows={2}
-        className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-base text-neutral-900"
+        className="w-full rounded-xl border border-paper-dashed bg-white px-3.5 py-2.5 text-base font-medium text-ink outline-none"
       />
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="h-11 px-3 text-base text-neutral-500">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="min-h-11.5 flex-none rounded-xl border border-paper-dashed bg-white px-4.5 text-sm font-medium text-ink-label"
+        >
           キャンセル
         </button>
         <button
           type="submit"
-          className="h-11 rounded-lg bg-pink-500 px-4 text-base font-semibold text-white"
+          className="min-h-11.5 flex-1 rounded-xl bg-sakura text-[15px] font-bold text-white"
         >
-          保存
+          登録する
         </button>
       </div>
     </form>

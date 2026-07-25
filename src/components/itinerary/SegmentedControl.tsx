@@ -1,6 +1,9 @@
 /**
- * S3c SegmentedControl(「旅程」/「行きたい場所」の2ボタン切替)。
+ * S3c SegmentedControl(「旅程」/「行きたい場所」の2分割切替)。
  * 参照: docs/design/screens/S3c_旅程スポット.md「前提」
+ *
+ * タブバーと同じ「選択中は差し色の太字+下辺のインクバー」で揃える。
+ * 上位のタブバーより1段下の階層であることを示すため、インクバーは2.5px(タブバーは3px)。
  */
 export type ItinerarySegment = "itinerary" | "spots";
 
@@ -16,7 +19,7 @@ const SEGMENTS: { id: ItinerarySegment; label: string }[] = [
 
 export function SegmentedControl({ active, onChange }: SegmentedControlProps) {
   return (
-    <div className="flex gap-1 bg-neutral-50 px-4 py-3" role="tablist">
+    <div className="grid grid-cols-2 border-b border-paper-border" role="tablist">
       {SEGMENTS.map((segment) => {
         const selected = segment.id === active;
         return (
@@ -26,8 +29,10 @@ export function SegmentedControl({ active, onChange }: SegmentedControlProps) {
             role="tab"
             aria-selected={selected}
             onClick={() => onChange(segment.id)}
-            className={`h-11 flex-1 rounded-full text-sm font-semibold ${
-              selected ? "bg-pink-100 text-pink-700" : "bg-transparent text-neutral-500"
+            className={`min-h-11 text-[14.5px] ${
+              selected
+                ? "font-bold text-sakura-ink shadow-[inset_0_-2.5px_0_var(--color-sakura)]"
+                : "font-medium text-ink-strong"
             }`}
           >
             {segment.label}

@@ -14,10 +14,25 @@
 
 ## レイアウト(上から順、タブシェル内のコンテンツ領域)
 
-1. **SegmentedControl**: 「旅程」/「行きたい場所」
-2. **セクションエリア**(選択中セグメントに応じて表示切替)
-   - 「旅程」選択時: `ItinerarySection`
-   - 「行きたい場所」選択時: `SpotSection`
+1. **セグメント切替**(「旅程」/「行きたい場所」の2分割)
+   - タブバー直下に密着させ、上位タブとの階層関係を示す
+   - 選択中は`sakura-ink`の太字+下辺2.5pxのインクバー(タブバーは3px。1段下の階層であることを示すため細くする)
+2. **セクション本体**(左右余白`space-6`=24px。持ち物・やることと左端を揃える)
+
+### 旅程セクション
+
+1. ツールバー行: 件数「全4件・2日間」(0件なら「まだ予定がありません」)+「並べ替え」
+2. **日ごとのブロック**を日数分。1ブロック = 見出し + カード
+   - 見出し(カードの外、`text-heading` / `ink`): 「1日目 8/1(土)」
+   - カード(`paper-surface`背景、`paper-border`枠線、`radius-lg`): `EntryRow`を縦積み + 末尾に「＋ 予定を追加」行
+   - その日が0件のときはカード内に「この日の予定はまだありません」を出す(追加導線は末尾の行が担う)
+
+### 行きたい場所セクション
+
+1. `AddSpotBar`(「おすすめから探す」/「自由に追加する」の2ボタン)
+2. 件数「全n件」(0件なら「まだ登録がありません」)
+3. リストカード(`SpotRow`を縦積み)。0件のときは`EmptySpots`の破線カード
+
 
 ## コンポーネント構造
 
@@ -36,151 +51,90 @@
 
 ```
 <ItinerarySection>
-  <Toolbar count={totalEntries} sortMode onToggleSort />
-  {/* 並べ替えボタンは全エントリー数が2件以上のときのみ表示(S3a/S3bと同基準) */}
-  <DayList>
-    {days.map(day => (
-      <DayBlock key={day.date} label={day.label}>  {/* 例: 「1日目 8/1(土)」 */}
-        {day.entries.length === 0
-          ? <EmptyDay onAdd={() => openAddForm(day.date)} />
-          : day.entries.map(entry =>
-              sortMode
-                ? <EntryRowSortMode entry={entry} onMoveUp onMoveDown />
-                : <EntryRow entry={entry} onEdit onDelete />
-            )}
-        {!sortMode && day.entries.length > 0 && (
-          <AddEntryButton onTap={() => openAddForm(day.date)} />
-        )}
-        {addFormOpenFor === day.date && (
-          <AddEntryForm day={day.date} onSave onCancel />
-        )}
-      </DayBlock>
-    ))}
-  </DayList>
+  <ItineraryToolbar count dayCount sortMode onToggleSort sortAvailable />
+  {days.map(day => (
+    <DayBlock>
+      <h2>1日目 8/1(土)</h2>
+      <Card>
+        {day.entries.length === 0 ? <EmptyDay />
+          : day.entries.map(entry => sortMode
+              ? <EntryRowSortMode ... />
+              : <EntryRow entry mode highlighted onStartEdit onStartDelete ... />)}
+        {addFormOpen && <AddEntryForm onSave onCancel />}
+        {!sortMode && !addFormOpen && <AddEntryButtonRow />}
+      </Card>
+    </DayBlock>
+  ))}
 </ItinerarySection>
 ```
 
-`days`は保存データから取得するのではなく、しおりの`start_date`〜`end_date`(`S2_しおり作成.md`で入力必須)を**日付順にUI側で列挙**して生成する。各`day`には、その`day_date`に一致する`itinerary_entries`を`sort_order`昇順で割り当てる。
+#### EntryRow(通常表示、1行)
 
-型上は`start_date`/`end_date`が`string | null`のため、いずれかが`null`の場合(イレギュラーなデータ・将来の仕様変更)は日ブロックを生成せず、フォールバック表示「日程が設定されていません」(`text-body-sm` / `color-text-secondary`)のみを出す(ランタイムエラー・無限ループを避ける防御)。既存エントリーがある場合も同メッセージの下に日付グループ無しで一覧表示してよい(実装裁量)。
+行高さ72px、左右余白`space-4`。**行全体が1つのボタン**で、タップすると編集(詳細)表示に切り替わる:
 
-#### DayBlock(日ブロック)
+1. 時刻(`sakura-ink`の太字13px、幅52px固定)。時刻の桁数に関わらず予定名の左端が揃うよう幅を固定する
+2. 予定名(`text-body` / `ink`)
+3. 場所(あるとき、ピンのアイコン+`ink-sub`の12.5px)
+4. メモ(あるとき、`ink-muted`の12.5px、最大2行)
+5. 右端にシェブロン(`ink-faint`)
 
-- 見出し(`text-heading-md`): 「{n}日目 {M/D}({曜日})」。例: 「1日目 8/1(土)」「2日目 8/2(日)」
-- 見出し下に`space-3`の余白を置き、エントリー一覧 → 「＋ 予定を追加」ボタンの順に並べる
-- ブロック間の縦間隔は`space-6`
+「旅程に追加」直後の行は`sakura-soft`で一時的に強調し、その位置までスクロールする。
 
-#### EntryRow(通常モード、1行)
+**旧UIにあった行内の編集(✎)・削除(🗑)ボタンは廃止した。** 行全体をタップして開く編集表示に集約する
+(右端のシェブロンがその導線であることを示す)。
 
-縦積み構成、左右余白`space-4`、上下パディング`space-3`、下境界`color-border-default`。右上に編集(鉛筆)・削除(ゴミ箱)ボタン(各44×44px、S3a/S3bと同配置)。
+#### EntryRow(編集/詳細表示)
 
-1. 1行目(横並び): 時刻(設定時のみ、`text-body-sm` / `color-text-secondary`、例「10:00」) + タイトル(`text-body`、flex-grow)
-2. 2行目(場所名設定時のみ): 📍アイコン + 場所名(`text-body-sm` / `color-primary`)。タップで`buildGoogleMapsSearchUrl(place_name)`(`src/lib/googleMapsUrl.ts`、内部で`encodeURIComponent`済み)のURLを新規タブで開く
-3. 3行目(メモ設定時のみ): メモ(`text-body-sm` / `color-text-secondary`、複数行可)
+行が`sakura-tint`背景の入力フォームに置き換わる。上から:
 
-#### EntryRow(編集中)
-
-時刻・タイトル・場所名・メモがそれぞれ入力欄に置き換わる(時刻=`<input type="time">`相当、他はテキスト入力)。右上のアイコンが「保存(✓)」「キャンセル(×)」に変わる。時刻入力には「時刻を削除」リンク(`text-caption`、S3bの「期限を削除」と同パターン)を添え、タップで時刻を未設定に戻せる(保存はまだ確定せず、✓押下で確定)。加えて**日付の変更プルダウン**(選択肢はしおりの`start_date`〜`end_date`の日付一覧、ラベルは「1日目 8/1(土)」形式)を置き、予定を別の日へ移動できるようにする(移動先の日では末尾のsort_orderを割り当てる。削除→再登録しないと日を移せない問題への対応。レビュー指摘反映)。しおりの日程が`null`でフォールバック表示中の場合は日付一覧を生成できないため、このプルダウンは表示しない(編集は他項目のみ可能)。
-
-#### EntryRow(削除確認中)
-
-S3a/S3bと同じインラインパターン:「本当に削除しますか？」+「削除」(`color-error`文字)+「キャンセル」。
+1. 時刻(任意)+「時刻を削除」
+2. 予定名 / 場所(任意) / メモ(任意) / 日付(プルダウン)
+   - **各入力欄に見出しラベルを付ける。** 5つの入力欄が並ぶため、プレースホルダーだけでは入力後に何の欄か分からなくなる
+3. 「キャンセル」+「保存する」
+4. 「地図で見る」(場所が入っているときのみ。Google Mapsを別タブで開く)
+5. 「この予定を削除する」(`color-error`)
 
 #### EntryRowSortMode(並べ替えモード、1行)
 
-上矢印/下矢印ボタン(各44×44px)。**同じ日の中でのみ**有効(日をまたぐ並べ替えは不可)。その日の先頭行の上矢印・末尾行の下矢印は無効化(`color-text-disabled`表示、タップ不可)。タイトルのみ表示(タップ操作不可)。S3a `PackingRowSortMode`と同パターン。
+上へ/下へ移動ボタン+予定名。移動できない方向のボタンは`paper-track`背景+`ink-faint`文字で無効を示す。
+同じ日の中でのみ移動できる(日をまたぐ並べ替えは不可)。
 
-#### EmptyDay(その日の予定が0件)
+#### AddEntryForm(予定追加フォーム)
 
-- 説明文(`text-body-sm` / `color-text-secondary`): 「この日の予定はまだありません」
-- 「予定を追加」ボタン(`color-primary`テキストボタン)
+日カードの末尾にインライン表示。編集表示と同じ項目・同じラベルの付け方にする。
 
-#### AddEntryForm(予定追加フォーム、該当日のDayBlock内にインライン表示)
-
-- 時刻入力(任意、`<input type="time">`相当)
-- タイトル入力(必須、プレースホルダー「例: 会場入り」、上限30文字)
-- 場所名入力(任意、プレースホルダー「例: 東京ビッグサイト」、上限50文字)
-- メモ入力(任意、複数行テキスト、プレースホルダー「例: 開場30分前に到着」、上限100文字)
-- 「保存」ボタン + 「キャンセル」ボタン
-- タイトルを`trim()`(前後の半角・全角スペース除去)した結果が空の場合は保存せず、タイトル入力欄下に「予定のタイトルを入れてください」(`color-error`)を表示する。保存時もトリム後の文字列を保存する
-- 保存成功時: 該当日の末尾(その日の中での最大`sort_order`+1)にエントリーを追加し、フォームを閉じて通常表示に戻る
 
 ### SpotSection
 
 ```
 <SpotSection>
-  <AddSpotBar>
-    <Button primary onTap={() => router.push(`/shiori/${id}/spots/search`)}>おすすめスポットから探す</Button>
-    <Button secondary onTap={() => setFreeFormOpen(true)}>自由に追加する</Button>
-  </AddSpotBar>
+  <AddSpotBar onFindSeed onOpenFreeForm />
   {freeFormOpen && <FreeSpotForm onSave onCancel />}
-  <Toolbar count={spots.length} />  {/* 並べ替えは無し。F5仕様に並べ替えの記載が無いため */}
-  <List>
-    {spots.length === 0
-      ? <EmptySpots />
-      : spots.map(spot => (
-          <SpotRow spot={spot} onToggleVisited onOpenAddToItinerary onDelete />
-        ))}
-  </List>
+  <Count>全n件</Count>
+  {rows.length === 0 ? <EmptySpots />
+    : <Card>{rows.map(row => <SpotRow row mode ... />)}</Card>}
 </SpotSection>
 ```
 
-#### AddSpotBar
-
-- 「おすすめスポットから探す」ボタン(`color-primary`背景、`radius-md`): タップでS4(`/shiori/[id]/spots/search`)へ遷移
-- 「自由に追加する」ボタン(`color-bg-surface`背景+`color-border-default`枠線、`radius-md`): タップで`FreeSpotForm`を開く
-- 常にリスト上部に表示する(空状態でも表示され続けるため、`EmptySpots`側に専用の追加ボタンは重複させない)
-
-#### FreeSpotForm(自由入力フォーム、インライン表示)
-
-- 名前入力(必須、プレースホルダー「例: ○○神社」、上限30文字)
-- メモ入力(任意、プレースホルダー「例: 聖地巡礼で行きたい」、上限100文字)
-- 「追加」ボタン + 「キャンセル」ボタン
-- 名前を`trim()`した結果が空の場合は保存せず、名前入力欄下に「スポット名を入れてください」(`color-error`)を表示する。保存時もトリム後の文字列を保存する
-- 保存成功時: ローカル`spots`ストアに`source: 'ugc'`・`status: 'private'`・入力した名前/メモ相当の`description`なしで新規保存し、`shiori_spots`に`memo`付きで紐付ける。一覧の末尾に追加し、フォームを閉じて通常表示に戻る
-
 #### SpotRow(1行)
 
-横並び、行高さ可変(内容による)、左右余白`space-4`、上下パディング`space-3`、下境界`color-border-default`。
+1. 訪問済みチェックボックス(24px角丸。チェック済みは`sakura`塗り)
+2. 名前(訪問済みは打ち消し線+`ink-done`)、カテゴリバッジ(`sakura-soft`背景)
+3. エリア / 「地図で見る」 / 説明 / 注意 / メモ
+4. 右側に「旅程に追加」ボタン(白地+`sakura-border`枠+`sakura-ink`文字)と「削除」
 
-1. 訪問済みチェックボックス(44×44px)。タップで`is_visited`をトグル。チェック済みは名前に打ち消し線+`color-text-muted`(PackingRowと同パターン、位置は変えない=並べ替えは発生しない)
-2. テキスト情報(縦積み、flex-grow):
-   - 名前(`text-body`) + カテゴリバッジ(`category`設定時のみ表示。チップ: 背景`color-primary-soft`・文字`color-primary-soft-text`・`radius-full`。ラベルは下記「カテゴリ表示名」参照)
-   - エリア(`text-body-sm` / `color-text-secondary`、`area`設定時のみ): 例「神奈川県横浜市」
-   - 「地図で見る」リンク(`text-body-sm` / `color-primary`)。タップで`buildGoogleMapsSearchUrl(spot.name)`のURLを新規タブで開く
-   - オタク文脈の説明(`text-caption` / `color-text-secondary`、`description`設定時のみ、2行までで省略`line-clamp-2`)
-   - 注意書き(`text-caption` / `color-error`、`caution`設定時のみ): 「⚠ {caution本文}」
-   - しおり内メモ(`text-body-sm` / `color-text-primary`、`shiori_spots.memo`設定時のみ): 「メモ: {memo}」
-3. アクション(右側、縦積み): 「旅程に追加」ボタン(`text-caption`、`color-primary`テキストボタン) + 削除(ゴミ箱、44×44px)
+「旅程に追加」を押すと行の下に日付・時刻のピッカーが開き、「旅程に追加する」で確定する。
+削除は行の下に確認("「<名前>」を削除します。よろしいですか?")を出してから確定する。
 
-##### カテゴリ表示名
+#### AddSpotBar
 
-| `category`値 | 表示名 |
-|---|---|
-| `venue` | 会場 |
-| `seichi` | 聖地 |
-| `food` | グルメ |
-| `goods` | グッズ |
-| `other` | その他 |
-
-#### SpotRow(旅程に追加ピッカー表示中)
-
-「旅程に追加」タップ後、行の下にインラインピッカーを表示する:
-
-- 日付選択(プルダウン、選択肢はしおりの`start_date`〜`end_date`の日付一覧、ラベルは「1日目 8/1(土)」形式)
-- 時刻入力(任意)
-- 「追加」ボタン + 「キャンセル」ボタン
-
-保存成功時: 選択した日の`itinerary_entries`に`title=スポット名`・`place_name=スポット名`・`time=入力値(任意)`・`memo=shiori_spots.memoがあれば流用`で末尾に追加する。ピッカーを閉じ、**SegmentedControlを「旅程」に自動的に切り替え**、追加したエントリーの位置までスクロールする。追加したエントリーの行は次の操作(タップ・再切替)までの間、`color-primary-soft`背景で一時的に強調する(フェードアウト等のアニメーションは指定しない)。
-
-#### SpotRow(削除確認中)
-
-S3a/S3bと同じインラインパターン:「本当に削除しますか？」+「削除」+「キャンセル」。削除は`shiori_spots`の紐付け解除に加え、対象が自由入力スポット(`source='ugc'`かつ`status='private'`)の場合は`spots`本体も削除する(どこからも参照されない孤立レコードがIndexedDBに残り続けるのを防ぐ。シードスポットは同梱JSON参照のためストア削除は発生しない。レビュー指摘反映・guest-storeの`deleteShiori`カスケード方針と整合)。実装上の注記: 現行の`guest-store.ts`の`deleteShioriSpot`は紐付け削除のみのため、F5実装(タスク#9)ではUI側で`deleteShioriSpot`+`deleteSpot`を組み合わせて呼ぶか、guest-storeにUGC判定込みの複合削除ヘルパーを追加する(どちらを選んだかは完了報告に明記)。
+「おすすめから探す」(`sakura`背景の主ボタン)と「自由に追加する」(白地+`sakura-border`枠)の2つ。
 
 #### EmptySpots(空状態)
 
-- 説明文(`text-body` / `color-text-secondary`): 「まだ行きたい場所がありません」
-- 補足文(`text-body-sm` / `color-text-secondary`): 「上のボタンから追加しましょう」
+破線枠のカード。見出し「行きたい場所はまだありません」+説明「聖地やカフェなど、遠征中に寄りたい場所を登録しましょう」。
+追加導線は上の`AddSpotBar`が常に出ているため、このカードにはボタンを置かない。
+
 
 ## 状態
 
@@ -281,6 +235,21 @@ S3a/S3bと同じインラインパターン:「本当に削除しますか？」
 - スポットセクションは主に計画段階での利用を想定。当日は「訪問済み」チェックのみで完結できる(並べ替え・編集は無い)
 - 旅程CRUD・スポットの自由入力・訪問済みトグル・紐付け解除はIndexedDBのみで完結し通信不要。ただし「おすすめスポットから探す」(S4遷移)・「地図で見る」リンクは外部通信を伴うため、電波が弱い会場では失敗する可能性がある点をS4側にも明記した
 - SegmentedControlの2ボタンは高さ44px以上を確保し、片手操作でも押し間違えにくい大きさにした
+
+## リニューアルで変わった主な文言
+
+| 場所 | 旧 | 新 |
+|---|---|---|
+| ツールバーの件数 | n件 | 全n件・m日間 / まだ予定がありません |
+| 並べ替え中のボタン | 完了 | 並べ替えを終える |
+| 予定の保存ボタン | 保存(✓アイコン) | 保存する |
+| 予定の削除 | 🗑アイコン | この予定を削除する(編集表示の中) |
+| 削除確認 | 本当に削除しますか？ | 「<名前>」を削除します。よろしいですか? |
+| スポット追加ボタン | おすすめスポットから探す | おすすめから探す |
+| スポットの件数 | n件 | 全n件 / まだ登録がありません |
+| スポットの空状態 | まだ行きたい場所がありません | 行きたい場所はまだありません |
+| 旅程への追加確定 | 追加 | 旅程に追加する |
+| スポットの削除 | 🗑アイコン | 削除 |
 
 ## 不明点・仮置き
 

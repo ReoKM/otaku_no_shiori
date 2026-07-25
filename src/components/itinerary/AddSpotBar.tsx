@@ -9,18 +9,18 @@ interface AddSpotBarProps {
 
 export function AddSpotBar({ onFindSeed, onOpenFreeForm }: AddSpotBarProps) {
   return (
-    <div className="flex gap-2 px-4 py-3">
+    <div className="flex gap-2 pt-5">
       <button
         type="button"
         onClick={onFindSeed}
-        className="h-11 flex-1 rounded-lg bg-pink-500 px-3 text-base font-semibold text-white"
+        className="min-h-12 flex-1 rounded-btn bg-sakura px-3 text-[14.5px] font-bold text-white"
       >
-        おすすめスポットから探す
+        おすすめから探す
       </button>
       <button
         type="button"
         onClick={onOpenFreeForm}
-        className="h-11 flex-1 rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+        className="min-h-12 flex-1 rounded-btn border border-sakura-border bg-paper-surface px-3 text-[14.5px] font-bold text-sakura-ink"
       >
         自由に追加する
       </button>

@@ -49,6 +49,7 @@ export function ItineraryTab({
 
   return (
     <div className="flex flex-1 flex-col">
+      {/* セグメントはタブバー直下に密着させ、上位タブとの階層関係を示す */}
       <SegmentedControl active={section} onChange={setSection} />
       {section === "itinerary" ? (
         dayList === undefined ? (

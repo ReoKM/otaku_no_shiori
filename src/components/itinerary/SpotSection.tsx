@@ -180,7 +180,7 @@ export function SpotSection({
 
   if (state === null) {
     return (
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col px-6 pb-8">
         <AddSpotBar onFindSeed={handleFindSeed} onOpenFreeForm={handleOpenFreeForm} />
         <ItinerarySkeleton />
       </div>
@@ -190,16 +190,18 @@ export function SpotSection({
   const { rows } = state;
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col px-6 pb-8">
       <AddSpotBar onFindSeed={handleFindSeed} onOpenFreeForm={handleOpenFreeForm} />
       {freeFormOpen && <FreeSpotForm onSave={handleSaveFreeForm} onCancel={handleCancelFreeForm} />}
-      <div className="flex h-11 items-center px-4">
-        <p className="text-sm text-neutral-500">{rows.length}件</p>
+      <div className="pt-5 pb-3">
+        <p className="text-[13px] font-medium text-ink-sub">
+          {rows.length === 0 ? "まだ登録がありません" : `全${rows.length}件`}
+        </p>
       </div>
       {rows.length === 0 ? (
         <EmptySpots />
       ) : (
-        <div className="flex flex-col">
+        <div className="overflow-hidden rounded-2xl border border-paper-border bg-paper-surface">
           {rows.map((row) => {
             const mode: SpotRowMode =
               addPickerSpotId === row.spotId ? "addPicker" : deletingSpotId === row.spotId ? "delete" : "view";
