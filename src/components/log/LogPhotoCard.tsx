@@ -31,15 +31,19 @@ export function LogPhotoCard({ photo, onTapEdit, selectMode, selected, onToggleS
           onClick={selectMode ? onToggleSelect : onTapEdit}
           aria-label={selectMode ? "写真を選択" : "写真を編集"}
           aria-pressed={selectMode ? selected : undefined}
-          className="block h-full w-full overflow-hidden rounded-lg bg-neutral-100"
+          className="block h-full w-full overflow-hidden rounded-xl border border-paper-border bg-paper-track"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- IndexedDBのBlobをObjectURL表示するためnext/imageの最適化対象外 */}
-          <img src={url} alt="" className="h-full w-full object-cover" />
+          {/* 初回レンダー(ObjectURL確保前)は空文字が返る。src=""はページ全体の再取得を
+              招くブラウザ挙動があるため、URLが確定するまでimg自体を描画しない */}
+          {url && (
+            // eslint-disable-next-line @next/next/no-img-element -- IndexedDBのBlobをObjectURL表示するためnext/imageの最適化対象外
+            <img src={url} alt="" className="h-full w-full object-cover" />
+          )}
         </button>
         {selectMode && (
           <div
-            className={`pointer-events-none absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-              selected ? "bg-pink-500 text-white" : "bg-white/80 text-transparent"
+            className={`pointer-events-none absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+              selected ? "bg-sakura text-white" : "bg-white/80 text-transparent"
             }`}
           >
             ✓
@@ -49,7 +53,9 @@ export function LogPhotoCard({ photo, onTapEdit, selectMode, selected, onToggleS
       <button
         type="button"
         onClick={selectMode ? onToggleSelect : onTapEdit}
-        className={`truncate text-left text-xs ${photo.caption ? "text-neutral-500" : "text-neutral-400"}`}
+        className={`truncate text-left text-[11.5px] ${
+          photo.caption ? "text-ink-sub" : "text-ink-faint"
+        }`}
       >
         {photo.caption ?? "メモを追加"}
       </button>

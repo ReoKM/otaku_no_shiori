@@ -15,6 +15,7 @@ import { LogPhotoCardEditing } from "./LogPhotoCardEditing";
 import { LogPhotoCardError } from "./LogPhotoCardError";
 import { LogPhotoCardProcessing } from "./LogPhotoCardProcessing";
 import { LogPhotoGrid } from "./LogPhotoGrid";
+import { LogShareCard } from "./LogShareCard";
 import { LogSkeleton } from "./LogSkeleton";
 import { LogToolbar } from "./LogToolbar";
 
@@ -266,7 +267,7 @@ export function LogTab({ shioriId }: { shioriId: string }) {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col px-6 pb-8">
       <LogToolbar
         count={savedCount}
         max={maxPhotos}
@@ -292,13 +293,13 @@ export function LogTab({ shioriId }: { shioriId: string }) {
           e.target.value = "";
         }}
       />
-      {notice && <p className="px-4 py-2 text-sm text-red-600">{notice}</p>}
+      {notice && <p className="pb-2 text-[13px] font-medium text-red-600">{notice}</p>}
       <div className="flex-1">
         {listItems.length === 0 ? (
           <EmptyLog onAddPhoto={handleAddPhotoClick} />
         ) : (
           groups.map((group) => (
-            <LogDateGroup key={group.key} label={group.label}>
+            <LogDateGroup key={group.key} label={group.label} count={group.items.length}>
               <LogPhotoGrid>
                 {group.items.map((item) => {
                   if (item.kind === "processing") {
@@ -349,7 +350,8 @@ export function LogTab({ shioriId }: { shioriId: string }) {
           ))
         )}
       </div>
-      <div className="px-4 pb-4">
+      {savedCount > 0 && <LogShareCard shioriId={shioriId} />}
+      <div className="pt-4">
         <AdSlotPlaceholder />
       </div>
     </div>
