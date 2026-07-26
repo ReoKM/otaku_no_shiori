@@ -88,7 +88,8 @@ export function ShioriCreateForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-5 px-4 py-4">
+      {/* 各入力欄は1枚の紙面としてカードにまとめ、S3のカード構成と揃える */}
+      <div className="flex flex-1 flex-col gap-6 px-6 pt-5 pb-8">
         <div ref={(el) => { fieldRefs.current.title = el; }}>
           <FieldTitle value={title} onChange={setTitle} error={errors.title} disabled={submitting} />
         </div>
@@ -122,11 +123,11 @@ export function ShioriCreateForm() {
           disabled={submitting}
         />
       </div>
-      <div className="sticky bottom-0 border-t border-neutral-200 bg-white p-4">
+      <div className="sticky bottom-0 border-t border-paper-border bg-paper-surface px-6 py-3.5">
         <button
           type="submit"
           disabled={submitting}
-          className="h-11 w-full rounded-lg bg-pink-500 text-base font-semibold text-white disabled:opacity-70"
+          className="min-h-13 w-full rounded-btn bg-sakura text-[15px] font-bold text-white disabled:bg-paper-track disabled:text-ink-faint"
         >
           {submitting ? "作成中…" : "しおりを作る"}
         </button>

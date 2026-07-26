@@ -20,10 +20,10 @@ export function FieldDateRange({
 }: FieldDateRangeProps) {
   return (
     <div>
-      <p className="mb-1 text-sm font-semibold text-neutral-900">日程 ※必須</p>
+      <p className="mb-1.5 block px-0.5 text-[13px] font-bold text-ink-label">日程 ※必須</p>
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
-          <label htmlFor="shiori-start-date" className="mb-1 block text-sm text-neutral-500">
+          <label htmlFor="shiori-start-date" className="mb-1 block px-0.5 text-xs font-medium text-ink-muted">
             開始日
           </label>
           <input
@@ -32,14 +32,14 @@ export function FieldDateRange({
             value={startDate}
             disabled={disabled}
             onChange={(e) => onStartDateChange(e.target.value)}
-            className={`h-11 w-full rounded-lg border bg-white px-3 text-base text-neutral-900 ${
-              startDateError ? "border-red-400" : "border-neutral-200"
+            className={`min-h-12 w-full rounded-xl border-[1.5px] bg-white px-3.5 text-base font-medium text-ink outline-none placeholder:font-normal placeholder:text-ink-faint ${
+              startDateError ? "border-red-400" : "border-paper-dashed focus:border-sakura-field"
             }`}
           />
-          {startDateError && <p className="mt-1 text-xs text-red-600">{startDateError}</p>}
+          {startDateError && <p className="mt-1 px-0.5 text-xs font-medium text-red-600">{startDateError}</p>}
         </div>
         <div className="flex-1">
-          <label htmlFor="shiori-end-date" className="mb-1 block text-sm text-neutral-500">
+          <label htmlFor="shiori-end-date" className="mb-1 block px-0.5 text-xs font-medium text-ink-muted">
             終了日
           </label>
           <input
@@ -48,11 +48,11 @@ export function FieldDateRange({
             value={endDate}
             disabled={disabled}
             onChange={(e) => onEndDateChange(e.target.value)}
-            className={`h-11 w-full rounded-lg border bg-white px-3 text-base text-neutral-900 ${
-              endDateError ? "border-red-400" : "border-neutral-200"
+            className={`min-h-12 w-full rounded-xl border-[1.5px] bg-white px-3.5 text-base font-medium text-ink outline-none placeholder:font-normal placeholder:text-ink-faint ${
+              endDateError ? "border-red-400" : "border-paper-dashed focus:border-sakura-field"
             }`}
           />
-          {endDateError && <p className="mt-1 text-xs text-red-600">{endDateError}</p>}
+          {endDateError && <p className="mt-1 px-0.5 text-xs font-medium text-red-600">{endDateError}</p>}
         </div>
       </div>
     </div>

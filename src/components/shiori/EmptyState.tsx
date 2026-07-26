@@ -5,24 +5,34 @@ import { useRouter } from "next/navigation";
 /**
  * S1の空状態(ランディング兼用)ブロック。
  * 参照: docs/design/screens/S1_ホーム一覧.md「EmptyState」
+ *
+ * 初回訪問者がまず見る画面なので、他タブの空状態(破線カード)より一段強い
+ * 「表紙」の扱いにする。見出しは900、CTAは全幅のベタ塗り。
  */
 export function EmptyState() {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col gap-4 py-8 text-center">
-      <h1 className="text-lg font-bold text-neutral-900">
-        遠征のすべてを、1冊のしおりに。
+    <div className="rounded-2xl border border-paper-border bg-paper-surface px-5 pt-8 pb-7 text-center">
+      <h1 className="text-[22px]/[1.45] font-black tracking-[0.01em] text-ink">
+        遠征のすべてを、
+        <br />
+        1冊のしおりに。
       </h1>
-      <p className="text-base text-neutral-500">
-        ライブも、イベントも、聖地巡礼も。持ち物・TODO・旅程をひとつにまとめて、遠征当日は片手でサクサク確認。登録なしで、いますぐ無料で使えます。
+      <p className="mt-4 text-[13px]/[1.9] text-ink-sub">
+        ライブも、イベントも、聖地巡礼も。
+        <br />
+        持ち物・やること・旅程をひとつにまとめて、
+        <br />
+        遠征当日は片手でサクサク確認。
       </p>
+      <p className="mt-3 text-xs font-medium text-ink-muted">登録なしで、いますぐ無料で使えます</p>
       <button
         type="button"
         onClick={() => router.push("/shiori/new")}
-        className="h-11 w-full rounded-lg bg-pink-500 text-base font-semibold text-white"
+        className="mt-6 min-h-13 w-full rounded-btn bg-sakura text-[15px] font-bold text-white"
       >
-        しおりを作る
+        ＋ 最初のしおりを作る
       </button>
     </div>
   );

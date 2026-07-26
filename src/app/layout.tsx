@@ -24,7 +24,7 @@ const zenKaku = Zen_Kaku_Gothic_New({
 export const metadata: Metadata = {
   title: "オタクのしおり | 遠征のすべてを、1冊のしおりに。",
   description:
-    "ライブ・イベント・聖地巡礼などオタクの遠征準備を1冊の「しおり」に。持ち物リスト・TODO・旅程・行きたいスポット・写真の記録が、登録なしで無料で使える遠征ツールです。",
+    "ライブ・イベント・聖地巡礼などオタクの遠征準備を1冊の「しおり」に。持ち物リスト・やること・旅程・行きたいスポット・写真の記録が、登録なしで無料で使える遠征ツールです。",
   manifest: "/manifest.webmanifest",
 };
 

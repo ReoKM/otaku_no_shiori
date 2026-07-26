@@ -127,3 +127,35 @@
   - 共有導線はヘッダーのアイコンと記録タブ下部のカードの2箇所になった。片方に寄せるかは要判断
   - 広告枠(F9)を破線カードに変えたが、AdSense実装時の見た目は別途調整が必要
 - 成果物: `src/components/log/`(9ファイル)、`src/components/common/AdSlotPlaceholder.tsx`、`docs/design/screens/S3d_ログ.md`
+
+## 01:20 UIリニューアル(追加) トップ(S1)としおり作成(S2)
+- Goal: S1・S2 が S3 と同じ紙テイストのデザインルールで表示され、CIが通る
+- 結果: 達成
+- やったこと:
+  - **S1(トップ)**
+    - `ShioriCard` をS3のリスト行と同じ「紙のカード+シェブロン」に変更。タイトル16px/700、日程12.5px、遠征タイプは `sakura-soft` のバッジ
+    - `CoverAvatar` を円(40px)から角丸(44px)に変更。絵文字は `paper-border` 枠+`paper` 背景に
+    - `FabButton` を＋アイコンだけの円形FABから、S3の追従ボタンと同じ「白地+桜枠+文言つきピル」に変更
+    - `EmptyState` を「表紙」の扱いに作り直し(見出し22px/900の2行、説明の行間1.9、全幅CTA「＋ 最初のしおりを作る」)
+    - `ShioriListSkeleton` を実際のカード形状に合わせて作り直し
+    - 読込エラーを破線カードにし、原因の補足文を追加
+  - **S2(しおり作成)**
+    - 全入力欄の見出しラベルを13px/700・`ink-label` に統一。入力欄は高さ48px・角丸12px・枠線1.5pxで、通常は `paper-dashed`、フォーカスで `sakura-field` に変わる形にした
+    - プレースホルダーを `ink-faint` の標準ウェイトにし、入力値(中太)と見分けがつくようにした
+    - `FieldTripType` のチップをピル型から角丸(12px)に変更し、入力欄と同じ矩形の系統に揃えた
+    - `FieldCover` の選択リングを `ring-offset` 付きの `sakura` に変更(面の色に埋もれないように)
+    - 送信ボタンを `radius-btn`・高さ52pxにし、無効表示を半透明から `paper-track` 背景+`ink-faint` 文字に変更
+  - **横断の修正2件**
+    - 広告枠・メタ説明・manifest の説明文にあった旧タブ名「TODO」を「やること」に統一
+    - しおりが1件以上あるとき、FabButton がフッターのリンク(プライバシーポリシー)に重なっていたのを、フッターの下余白を広げて解消
+  - Playwright(Chromium/390×800)で目視確認。空状態・作成フォーム・バリデーションエラー・入力済み・一覧(1件)の5状態を確認。コンソールエラー/ページエラーなし
+  - `docs/design/screens/S1_ホーム一覧.md` と `S2_しおり作成.md` のレイアウト・コンポーネント・文言を更新
+- できていないこと:
+  - スポット検索(S4)・共有画像プレビュー(S5)は旧トークンのまま。今回の依頼範囲外
+  - 利用規約・プライバシーポリシーのページは未着手(本文中心の静的ページのため影響は小さいが、ヘッダーの配色は旧のまま)
+  - 実機 iOS Safari での確認はしていない
+- 不明点・仮置き:
+  - S1・S2 は Claude Design のエクスポート対象外のため、S3で確立したトークンとパターン(カード/破線の空状態/桜枠のピル/シェブロン)から展開した。デザイン案そのものは存在しない
+  - FabButton を文言つきピルにしたのは、＋だけでは何が作られるか伝わらないという判断(S3の追従ボタンと同じ考え方)
+  - EmptyState だけ実線カード。他タブの空状態は破線だが、初回訪問者が最初に見る「表紙」なので一段強くした
+- 成果物: `src/app/page.tsx`、`src/app/shiori/new/page.tsx`、`src/components/shiori/`(5ファイル)、`src/components/shiori-form/`(6ファイル)、`src/components/common/AdSlotPlaceholder.tsx`、`src/app/layout.tsx`、`public/manifest.webmanifest`、`docs/design/screens/S1_ホーム一覧.md`、`docs/design/screens/S2_しおり作成.md`

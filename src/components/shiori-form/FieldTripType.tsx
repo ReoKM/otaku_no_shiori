@@ -12,7 +12,7 @@ interface FieldTripTypeProps {
 export function FieldTripType({ value, onChange, error, disabled }: FieldTripTypeProps) {
   return (
     <div>
-      <p className="mb-1 text-sm font-semibold text-neutral-900">遠征タイプ ※必須</p>
+      <p className="mb-1.5 block px-0.5 text-[13px] font-bold text-ink-label">遠征タイプ ※必須</p>
       <div className="grid grid-cols-2 gap-2">
         {TRIP_TYPE_OPTIONS.map((option) => {
           const selected = value === option.value;
@@ -23,10 +23,10 @@ export function FieldTripType({ value, onChange, error, disabled }: FieldTripTyp
               disabled={disabled}
               onClick={() => onChange(option.value)}
               aria-pressed={selected}
-              className={`h-11 rounded-full border px-3 text-sm ${
+              className={`min-h-12 rounded-xl border px-3 text-sm ${
                 selected
-                  ? "border-pink-500 bg-pink-100 text-pink-700"
-                  : "border-neutral-200 bg-white text-neutral-900"
+                  ? "border-sakura bg-sakura-soft font-bold text-sakura-ink"
+                  : "border-paper-dashed bg-white font-medium text-ink"
               }`}
             >
               {option.label}
@@ -34,7 +34,7 @@ export function FieldTripType({ value, onChange, error, disabled }: FieldTripTyp
           );
         })}
       </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 px-0.5 text-xs font-medium text-red-600">{error}</p>}
     </div>
   );
 }
