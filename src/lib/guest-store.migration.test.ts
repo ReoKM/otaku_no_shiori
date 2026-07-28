@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 /**
- * DB_VERSION 1→2のアップグレードで既存データ(shiori/packing_items/todos)が
+ * DB_VERSION 1→3のアップグレードで既存データ(shiori/packing_items/todos)が
  * 壊れないことを確認する回帰テスト。
  *
  * guest-store.ts を経由せず生のindexedDB APIでversion 1相当のDBを直接構築してから
- * guest-store.ts をimportし、getDb() が version 2へアップグレードする流れを再現する。
+ * guest-store.ts をimportし、getDb() が version 3へアップグレードする流れを再現する。
  * (このファイル専用にモジュールを新規importするため、他テストファイルの
  *  dbPromiseシングルトンとは独立して検証できる。vitestはデフォルトでテストファイルごとに
  *  モジュール・グローバルを分離するため、fake-indexeddb/autoが注入するindexedDBも
@@ -68,20 +68,22 @@ function seedVersion1Database(): Promise<void> {
   });
 }
 
-describe("guest-store: DB_VERSION 1→2 マイグレーション", () => {
+describe("guest-store: DB_VERSION 1→3 マイグレーション", () => {
   // 1つのitブロックにまとめる理由: guest-store.tsのDB接続はモジュール内シングルトンで
-  // 一度version 2にアップグレードすると接続が開いたままになる。同一テストファイル内で
+  // 一度version 3にアップグレードすると接続が開いたままになる。同一テストファイル内で
   // 複数のitに分けてそれぞれ`seedVersion1Database`(version 1で再オープン)を呼ぶと、
-  // 既にversion 2へ上がった接続が残っている状態にversion 1で開こうとしてVersionErrorになる。
-  it("version 1のDBをversion 2にアップグレードしても既存データが残り、新規4ストアも使える", async () => {
+  // 既にversion 3へ上がった接続が残っている状態にversion 1で開こうとしてVersionErrorになる。
+  it("version 1のDBをversion 3にアップグレードしても既存データが残り、新規ストアも使える", async () => {
     await seedVersion1Database();
 
     const {
+      createBudgetItem,
       createItineraryEntry,
       createPhoto,
       createShioriSpot,
       createSpot,
       getShiori,
+      listBudgetItemsByShiori,
       listItineraryEntriesByShiori,
       listPackingItemsByShiori,
       listPhotosByShiori,
@@ -117,5 +119,12 @@ describe("guest-store: DB_VERSION 1→2 マイグレーション", () => {
       blob: new Blob(["dummy"], { type: "image/webp" }),
     });
     expect((await listPhotosByShiori("legacy-shiori-1")).map((p) => p.id)).toEqual([photo.id]);
+
+    const budgetItem = await createBudgetItem({
+      shiori_id: "legacy-shiori-1",
+      label: "交通費",
+      amount: 12800,
+    });
+    expect((await listBudgetItemsByShiori("legacy-shiori-1")).map((b) => b.id)).toEqual([budgetItem.id]);
   });
 });
