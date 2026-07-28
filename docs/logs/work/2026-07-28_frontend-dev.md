@@ -1,0 +1,22 @@
+## 予算セグメント(やることタブ内)の実装
+- Goal: やることタブに予算セグメントが追加され、総額・費目・メモの入力とゲスト保存(IndexedDB)が動くデモが完成する
+- 結果: 達成
+- やったこと:
+  - `docs/design/screens/S3b2_予算.md`を全文精読し、既存`itinerary/SegmentedControl.tsx`+`ItineraryTab.tsx`、`todo/`一式、`list-ui/`共有部品の実装パターンを確認した
+  - `src/types/shiori.ts`に`Shiori.budget_total`/`Shiori.budget_memo`、`BudgetItem`型を追加
+  - `src/lib/guest-store.ts`: `DB_VERSION`を2→3に上げ`budget_items`ストア追加、CRUD(create/list/update/delete/reorder)実装、`deleteShiori`のカスケード削除・トランザクション対象に追加、`UpdateShioriInput`に`budget_total`/`budget_memo`を追加
+  - `src/lib/budget-validation.ts`(新規)+`budget-validation.test.ts`(9ケース): 費目名・金額(9,999,999円上限、数字以外/マイナス不可)・メモ200文字のバリデーション、`formatYen`フォーマッタ、全角数字正規化
+  - `guest-store.test.ts`/`guest-store.migration.test.ts`にbudget_items CRUD・カスケード削除・budget_total/budget_memo更新・DB_VERSION1→3マイグレーションのテストを追加
+  - `src/components/budget/`一式を新規作成: `BudgetSection`(状態管理本体)、`BudgetSummaryCard`(総額/進捗バー/割当済み/残り・超過、総額未設定時`EmptyBudgetTotal`)、`BudgetTotalSheet`(総額入力・クリア確認)、`BudgetRow`、`AddBudgetForm`(インライン追加・20件上限)、`EmptyBudget`、`BudgetActionSheet`(編集・削除確認)、`BudgetMemoCard`(表示/編集切替・文字数カウンタ)、`BudgetSkeleton`
+  - `src/components/todo/TodoTab.tsx`の中身を`TodoSection.tsx`へ切り出し、新規`TodoSegmentedControl.tsx`で「やること/予算」セグメントを切り替える薄いラッパーに変更(デフォルト「やること」)
+  - `npm run lint` / `npx tsc --noEmit` / `npm test`(355件)が全て成功することを確認
+  - Playwright(Chromium、375px幅)で実ブラウザ確認: しおり新規作成→やることタブ→予算セグメント切替→総額¥50,000設定→費目2件(交通費¥12,800/宿泊費¥20,000)追加→サマリーの「割り当て済み ¥32,800」「残り ¥17,200」表示を確認→メモ保存→リロード後も総額・費目・メモが保持されることを確認
+  - ブランチ`claude/budget-feature-demo`をpushし、PR #83(draft)を作成
+- できていないこと:
+  - Supabaseのマイグレーション・RLSポリシーは未実装(今回はゲスト保存IndexedDBのみのデモスコープ。クラウド同期は別タスク)
+  - 費目の並べ替えUI・実支出記録・費目プリセット自動投入は仕様どおり未実装(S3b2仕様の対象外に明記)
+- 不明点・仮置き:
+  - 費目件数上限20件・費目名20文字・メモ200文字・金額上限9,999,999円は`S3b2_予算.md`「不明点・仮置き」に明記された仮置き値をそのまま採用した
+  - F番号は未採番。`docs/01_service_spec.md`は今回更新していない(オーナー承認後にPM経由で追記予定)
+  - タスク指示は`BudgetItem`に`memo`フィールドを持たせる想定だったが、S3b2仕様の`BudgetMemoCard`は費目ごとではなく予算セクション全体で1本のメモを持つ構成のため、`BudgetItem.memo`は実装せず`Shiori.budget_memo`(新規追加)に持たせた。仕様(source of truth)を優先した判断として完了報告・PR本文にも明記した
+- 成果物: PR #83 (https://github.com/ReoKM/otaku_no_shiori/pull/83)。主要ファイル: `src/types/shiori.ts`、`src/lib/guest-store.ts`、`src/lib/budget-validation.ts`、`src/components/budget/*`、`src/components/todo/TodoTab.tsx`・`TodoSection.tsx`・`TodoSegmentedControl.tsx`
