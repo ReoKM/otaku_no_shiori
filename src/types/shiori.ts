@@ -27,18 +27,6 @@ export interface Shiori {
   trip_type: TripType;
   purpose: string | null;
   cover: Cover | null;
-  /**
-   * 予算総額(円単位の整数)。未設定時はnull。
-   * 参照: docs/design/screens/S3b2_予算.md「BudgetSummaryCard」
-   * (F番号未採番・オーナー草案。docs/01_service_spec.md未反映)
-   */
-  budget_total: number | null;
-  /**
-   * 予算セクションのメモ(最大200文字)。未入力時はnull。
-   * 参照: docs/design/screens/S3b2_予算.md「BudgetMemoCard」
-   * (費目ごとではなく予算セクション全体で1本のメモのため、費目=BudgetItemではなくここに持たせる)
-   */
-  budget_memo: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -59,21 +47,6 @@ export interface Todo {
   label: string;
   due_date: string | null;
   is_done: boolean;
-  sort_order: number;
-}
-
-/**
- * 予算の費目1件(F番号未採番・オーナー草案)。
- * 参照: docs/design/screens/S3b2_予算.md「BudgetRow」/「BudgetActionSheet」
- *
- * `amount`は円単位の整数(小数点は入力させない仕様)。
- * 費目単位のメモはS3b2仕様に無い(メモは予算セクション全体で1本、`Shiori.budget_memo`に持つ)ため持たない。
- */
-export interface BudgetItem {
-  id: string;
-  shiori_id: string;
-  label: string;
-  amount: number;
   sort_order: number;
 }
 

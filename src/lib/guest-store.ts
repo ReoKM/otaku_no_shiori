@@ -11,7 +11,6 @@
  */
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type {
-  BudgetItem,
   ItineraryEntry,
   PackingItem,
   Photo,
@@ -22,7 +21,7 @@ import type {
 } from "@/types/shiori";
 
 const DB_NAME = "otaku-no-shiori-guest";
-const DB_VERSION = 3;
+const DB_VERSION = 2;
 
 interface GuestStoreSchema extends DBSchema {
   shiori: {
@@ -56,11 +55,6 @@ interface GuestStoreSchema extends DBSchema {
   photos: {
     key: string;
     value: Photo;
-    indexes: { "by-shiori_id": string };
-  };
-  budget_items: {
-    key: string;
-    value: BudgetItem;
     indexes: { "by-shiori_id": string };
   };
 }
@@ -107,11 +101,6 @@ function getDb(): Promise<IDBPDatabase<GuestStoreSchema>> {
           const store = db.createObjectStore("photos", { keyPath: "id" });
           store.createIndex("by-shiori_id", "shiori_id");
         }
-        // version 3: 予算(budget_items)用ストアを追加。
-        if (!db.objectStoreNames.contains("budget_items")) {
-          const store = db.createObjectStore("budget_items", { keyPath: "id" });
-          store.createIndex("by-shiori_id", "shiori_id");
-        }
       },
     });
   }
@@ -126,10 +115,7 @@ export type CreateShioriInput = Pick<Shiori, "title" | "trip_type"> &
   Partial<Pick<Shiori, "start_date" | "end_date" | "purpose" | "cover">>;
 
 export type UpdateShioriInput = Partial<
-  Pick<
-    Shiori,
-    "title" | "start_date" | "end_date" | "trip_type" | "purpose" | "cover" | "budget_total" | "budget_memo"
-  >
+  Pick<Shiori, "title" | "start_date" | "end_date" | "trip_type" | "purpose" | "cover">
 >;
 
 export async function createShiori(input: CreateShioriInput): Promise<Shiori> {
@@ -143,8 +129,6 @@ export async function createShiori(input: CreateShioriInput): Promise<Shiori> {
     trip_type: input.trip_type,
     purpose: input.purpose ?? null,
     cover: input.cover ?? null,
-    budget_total: null,
-    budget_memo: null,
     created_at: now,
     updated_at: now,
   };
@@ -198,16 +182,7 @@ export async function updateShiori(id: string, patch: UpdateShioriInput): Promis
 export async function deleteShiori(id: string): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(
-    [
-      "shiori",
-      "packing_items",
-      "todos",
-      "itinerary_entries",
-      "spots",
-      "shiori_spots",
-      "photos",
-      "budget_items",
-    ],
+    ["shiori", "packing_items", "todos", "itinerary_entries", "spots", "shiori_spots", "photos"],
     "readwrite",
   );
 
@@ -237,11 +212,6 @@ export async function deleteShiori(id: string): Promise<void> {
 
   const photoIndex = tx.objectStore("photos").index("by-shiori_id");
   for await (const cursor of photoIndex.iterate(id)) {
-    await cursor.delete();
-  }
-
-  const budgetItemIndex = tx.objectStore("budget_items").index("by-shiori_id");
-  for await (const cursor of budgetItemIndex.iterate(id)) {
     await cursor.delete();
   }
 
@@ -620,67 +590,4 @@ export async function updatePhoto(id: string, patch: UpdatePhotoInput): Promise<
 export async function deletePhoto(id: string): Promise<void> {
   const db = await getDb();
   await db.delete("photos", id);
-}
-
-// =========================================================
-// budget_items (予算。F番号未採番・オーナー草案)
-// =========================================================
-
-export type CreateBudgetItemInput = Pick<BudgetItem, "shiori_id" | "label" | "amount"> &
-  Partial<Pick<BudgetItem, "sort_order">>;
-
-export type UpdateBudgetItemInput = Partial<Pick<BudgetItem, "label" | "amount" | "sort_order">>;
-
-export async function createBudgetItem(input: CreateBudgetItemInput): Promise<BudgetItem> {
-  const db = await getDb();
-  const sortOrder = input.sort_order ?? (await listBudgetItemsByShiori(input.shiori_id)).length;
-  const item: BudgetItem = {
-    id: crypto.randomUUID(),
-    shiori_id: input.shiori_id,
-    label: input.label,
-    amount: input.amount,
-    sort_order: sortOrder,
-  };
-  await db.add("budget_items", item);
-  return item;
-}
-
-/** 指定しおりの費目一覧を sort_order 昇順で返す。 */
-export async function listBudgetItemsByShiori(shioriId: string): Promise<BudgetItem[]> {
-  const db = await getDb();
-  const items = await db.getAllFromIndex("budget_items", "by-shiori_id", shioriId);
-  return items.sort((a, b) => a.sort_order - b.sort_order);
-}
-
-export async function updateBudgetItem(id: string, patch: UpdateBudgetItemInput): Promise<BudgetItem> {
-  const db = await getDb();
-  const tx = db.transaction("budget_items", "readwrite");
-  const current = await tx.store.get(id);
-  if (!current) {
-    throw new Error(`budget_item not found: ${id}`);
-  }
-  const updated: BudgetItem = { ...current, ...patch };
-  await tx.store.put(updated);
-  await tx.done;
-  return updated;
-}
-
-export async function deleteBudgetItem(id: string): Promise<void> {
-  const db = await getDb();
-  await db.delete("budget_items", id);
-}
-
-/** orderedIdsの並び順どおりに sort_order を 0始まり連番で一括更新する。 */
-export async function reorderBudgetItems(shioriId: string, orderedIds: string[]): Promise<void> {
-  const db = await getDb();
-  const tx = db.transaction("budget_items", "readwrite");
-  for (let i = 0; i < orderedIds.length; i += 1) {
-    const id = orderedIds[i];
-    const current = await tx.store.get(id);
-    if (!current || current.shiori_id !== shioriId) {
-      throw new Error(`budget_item not found in shiori ${shioriId}: ${id}`);
-    }
-    await tx.store.put({ ...current, sort_order: i });
-  }
-  await tx.done;
 }

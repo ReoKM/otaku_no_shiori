@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   countPhotosByShiori,
-  createBudgetItem,
   createItineraryEntry,
   createPackingItem,
   createPhoto,
@@ -9,7 +8,6 @@ import {
   createShioriSpot,
   createSpot,
   createTodo,
-  deleteBudgetItem,
   deleteItineraryEntry,
   deletePackingItem,
   deletePhoto,
@@ -19,7 +17,6 @@ import {
   deleteTodo,
   getShiori,
   getSpot,
-  listBudgetItemsByShiori,
   listItineraryEntriesByShiori,
   listPackingItemsByShiori,
   listPhotosByShiori,
@@ -27,11 +24,9 @@ import {
   listShioriSpotsByShiori,
   listSpots,
   listTodosByShiori,
-  reorderBudgetItems,
   reorderItineraryEntries,
   reorderPackingItems,
   reorderTodos,
-  updateBudgetItem,
   updateItineraryEntry,
   updatePackingItem,
   updatePhoto,
@@ -94,22 +89,7 @@ describe("guest-store: shiori", () => {
     await expect(updateShiori("no-such-id", { title: "x" })).rejects.toThrow();
   });
 
-  it("updateShioriでbudget_total・budget_memoを更新できる", async () => {
-    const created = await createShiori({ title: "予算テスト用", trip_type: "live" });
-    expect(created.budget_total).toBeNull();
-    expect(created.budget_memo).toBeNull();
-
-    const updated = await updateShiori(created.id, { budget_total: 50000, budget_memo: "早割で確保済み" });
-    expect(updated.budget_total).toBe(50000);
-    expect(updated.budget_memo).toBe("早割で確保済み");
-
-    const cleared = await updateShiori(created.id, { budget_total: null });
-    expect(cleared.budget_total).toBeNull();
-    // 総額クリアはメモを残す(仕様どおり、他フィールドを巻き込まない)
-    expect(cleared.budget_memo).toBe("早割で確保済み");
-  });
-
-  it("deleteShiori は本体と紐づく持ち物・TODO・旅程・スポット紐付け・写真・予算費目をカスケード削除する", async () => {
+  it("deleteShiori は本体と紐づく持ち物・TODO・旅程・スポット紐付け・写真をカスケード削除する", async () => {
     const shiori = await createShiori({ title: "削除対象", trip_type: "live" });
     await createPackingItem({ shiori_id: shiori.id, label: "うちわ" });
     await createPackingItem({ shiori_id: shiori.id, label: "ペンライト" });
@@ -118,7 +98,6 @@ describe("guest-store: shiori", () => {
     const spot = await createSpot({ name: "削除対象スポット" });
     await createShioriSpot({ shiori_id: shiori.id, spot_id: spot.id });
     await createPhoto({ shiori_id: shiori.id, blob: new Blob(["dummy"], { type: "image/webp" }) });
-    await createBudgetItem({ shiori_id: shiori.id, label: "交通費", amount: 12800 });
 
     await deleteShiori(shiori.id);
 
@@ -128,7 +107,6 @@ describe("guest-store: shiori", () => {
     expect(await listItineraryEntriesByShiori(shiori.id)).toEqual([]);
     expect(await listShioriSpotsByShiori(shiori.id)).toEqual([]);
     expect(await listPhotosByShiori(shiori.id)).toEqual([]);
-    expect(await listBudgetItemsByShiori(shiori.id)).toEqual([]);
     // 紐づいていたUGCスポット本体も孤立データにならないよう削除される
     expect(await getSpot(spot.id)).toBeUndefined();
   });
@@ -224,58 +202,6 @@ describe("guest-store: todos", () => {
     const reordered = await listTodosByShiori(shiori.id);
     expect(reordered.map((t) => t.label)).toEqual(["C", "A", "B"]);
     expect(reordered.map((t) => t.sort_order)).toEqual([0, 1, 2]);
-  });
-});
-
-describe("guest-store: budget_items", () => {
-  it("CRUD一通りと並び順(sort_order昇順)を確認する", async () => {
-    const shiori = await createShiori({ title: "予算テスト用", trip_type: "live" });
-
-    const item1 = await createBudgetItem({ shiori_id: shiori.id, label: "交通費", amount: 12800 });
-    const item2 = await createBudgetItem({ shiori_id: shiori.id, label: "宿泊費", amount: 20000 });
-
-    expect(item1.sort_order).toBe(0);
-    expect(item2.sort_order).toBe(1);
-    expect(item1.amount).toBe(12800);
-
-    const listed = await listBudgetItemsByShiori(shiori.id);
-    expect(listed.map((i) => i.label)).toEqual(["交通費", "宿泊費"]);
-
-    const updated = await updateBudgetItem(item1.id, { amount: 15000 });
-    expect(updated.amount).toBe(15000);
-    expect(updated.label).toBe("交通費");
-
-    await deleteBudgetItem(item2.id);
-    const afterDelete = await listBudgetItemsByShiori(shiori.id);
-    expect(afterDelete.map((i) => i.label)).toEqual(["交通費"]);
-  });
-
-  it("0円の費目も登録できる", async () => {
-    const shiori = await createShiori({ title: "0円費目テスト", trip_type: "other" });
-    const item = await createBudgetItem({ shiori_id: shiori.id, label: "無料グッズ", amount: 0 });
-    expect(item.amount).toBe(0);
-  });
-
-  it("reorderBudgetItems は指定順にsort_orderを0始まりで振り直す", async () => {
-    const shiori = await createShiori({ title: "予算並べ替え", trip_type: "seichi" });
-    const a = await createBudgetItem({ shiori_id: shiori.id, label: "A", amount: 100 });
-    const b = await createBudgetItem({ shiori_id: shiori.id, label: "B", amount: 200 });
-    const c = await createBudgetItem({ shiori_id: shiori.id, label: "C", amount: 300 });
-
-    await reorderBudgetItems(shiori.id, [c.id, a.id, b.id]);
-
-    const reordered = await listBudgetItemsByShiori(shiori.id);
-    expect(reordered.map((i) => i.label)).toEqual(["C", "A", "B"]);
-    expect(reordered.map((i) => i.sort_order)).toEqual([0, 1, 2]);
-  });
-
-  it("他のしおりに属するIDを含むreorderBudgetItemsはエラーになる", async () => {
-    const shioriA = await createShiori({ title: "A", trip_type: "live" });
-    const shioriB = await createShiori({ title: "B", trip_type: "live" });
-    const itemA = await createBudgetItem({ shiori_id: shioriA.id, label: "A費目", amount: 100 });
-    const itemB = await createBudgetItem({ shiori_id: shioriB.id, label: "B費目", amount: 200 });
-
-    await expect(reorderBudgetItems(shioriA.id, [itemA.id, itemB.id])).rejects.toThrow();
   });
 });
 
