@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AdSlotPlaceholder } from "@/components/common/AdSlotPlaceholder";
+import { FEATURE_SHARE } from "@/lib/feature-flags";
 import { createPhoto, deletePhoto, listPhotosByShiori, updatePhoto } from "@/lib/guest-store";
 import { groupLogsByDay, type LogGroupable } from "@/lib/log-sort";
 import { computeAcceptableCount, getMaxPhotosPerShiori } from "@/lib/photo-limit";
@@ -350,7 +351,8 @@ export function LogTab({ shioriId }: { shioriId: string }) {
           ))
         )}
       </div>
-      {savedCount > 0 && <LogShareCard shioriId={shioriId} />}
+      {/* 共有導線はファーストリリースでは閉じる(src/lib/feature-flags.ts) */}
+      {FEATURE_SHARE && savedCount > 0 && <LogShareCard shioriId={shioriId} />}
       <div className="pt-4">
         <AdSlotPlaceholder />
       </div>

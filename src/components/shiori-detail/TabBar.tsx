@@ -3,11 +3,13 @@ import Link from "next/link";
 // スポットは独立タブにせず旅程タブ内で扱う(2026-07-11オーナー決定。docs/01_service_spec.md参照)
 export type ShioriTabId = "packing" | "todo" | "itinerary" | "log";
 
-// 表示名はリニューアルデザインに合わせて「やること」「記録」に変更した。
+// 表示名はリニューアルデザインに合わせて「記録」に、さらにオーナー指示で todo タブを
+// 「やること」→「準備」に変更した(タブ内が「やること」/「費用」の2セグメントになったため、
+// 上位のタブ名はその両方を含む語にする)。
 // URLパス(/todo, /log)は既存リンク・SW のキャッシュルーティングを壊さないため据え置く。
 const TABS: { id: ShioriTabId; label: string }[] = [
   { id: "packing", label: "持ち物" },
-  { id: "todo", label: "やること" },
+  { id: "todo", label: "準備" },
   { id: "itinerary", label: "旅程" },
   { id: "log", label: "記録" },
 ];
@@ -20,7 +22,7 @@ interface TabBarProps {
 }
 
 /**
- * S3共通タブバー(持ち物/やること/旅程/記録の4分割)。
+ * S3共通タブバー(持ち物/準備/旅程/記録の4分割)。
  * 参照: docs/design/screens/S3_しおり詳細.md「2. タブバー」
  *
  * 選択中は差し色の文字+下辺3pxのインクバーで示す。

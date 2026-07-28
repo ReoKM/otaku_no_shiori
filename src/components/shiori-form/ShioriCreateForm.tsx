@@ -89,7 +89,8 @@ export function ShioriCreateForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-1 flex-col">
       {/* 各入力欄は1枚の紙面としてカードにまとめ、S3のカード構成と揃える */}
-      <div className="flex flex-1 flex-col gap-6 px-6 pt-5 pb-8">
+      {/* 項目間の余白は24px→20pxに詰めている(オーナー指示: 画面を少しコンパクトに) */}
+      <div className="flex flex-1 flex-col gap-5 px-6 pt-4 pb-7">
         <div ref={(el) => { fieldRefs.current.title = el; }}>
           <FieldTitle value={title} onChange={setTitle} error={errors.title} disabled={submitting} />
         </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ShioriDetailHeader } from "@/components/shiori-detail/ShioriDetailHeader";
 import { TabBar, type ShioriTabId } from "@/components/shiori-detail/TabBar";
+import { FEATURE_SHARE } from "@/lib/feature-flags";
 import { formatDateRange } from "@/lib/format-date";
 import { getShiori } from "@/lib/guest-store";
 import { useCompactHeader } from "@/lib/use-compact-header";
@@ -73,6 +74,10 @@ export default function ShioriDetailLayout({ children }: { children: React.React
 
   const activeTab = resolveActiveTab(pathname, shioriId);
   const dateRange = shiori ? formatDateRange(shiori.start_date, shiori.end_date) : null;
+  // 共有機能はファーストリリースでは閉じる(src/lib/feature-flags.ts)。
+  // フラグを`true`に戻すとヘッダーの共有アイコンが復活する。
+  const shareHref =
+    FEATURE_SHARE && state === "ready" ? `/shiori/${shioriId}/share` : undefined;
 
   // S4(スポット検索 `/shiori/[id]/spots/...`)/S5(共有画像 `/shiori/[id]/share`)は
   // 独自のヘッダー・戻る導線を持つ専用画面のため、このレイアウトのタブシェル
@@ -94,7 +99,7 @@ export default function ShioriDetailLayout({ children }: { children: React.React
           loading={state === "loading"}
           title={state === "not-found" ? "しおりが見つかりません" : (shiori?.title ?? "")}
           dateRange={dateRange}
-          shareHref={state === "ready" ? `/shiori/${shioriId}/share` : undefined}
+          shareHref={shareHref}
           compact={compact}
         />
         <TabBar shioriId={shioriId} activeTab={activeTab} disabled={state === "loading"} />
