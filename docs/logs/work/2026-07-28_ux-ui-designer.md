@@ -24,3 +24,23 @@
   - セクション選択のURL保持有無はfrontend-dev裁量
 - 成果物: `docs/design/screens/S3b2_予算.md`
 - 作業ログ: `docs/logs/work/2026-07-28_ux-ui-designer.md`
+
+---
+
+(以下は取りまとめ担当による追記)
+
+## 04:15 予算機能の検討取りまとめ
+- Goal: PM/UX・UI/バックエンド/グロースの4者の結論を1本の計画書に統合し、オーナーが採否を判断できる状態にする
+- 結果: 達成
+- やったこと:
+  - 4エージェント(pm-producer / ux-ui-designer / backend-dev / analytics-growth)へ論点を分けて検討を依頼
+  - オーナーのメモを3論点(A:機能 / B:配置 / C:レコメンド)に分解して評価
+  - `docs/design/notes/2026-07-28_予算機能の検討.md` に統合した計画書を作成
+- できていないこと:
+  - 検索需要・GA4実測値・ASP審査要件・5タブの実機確認・X上の実投稿調査(すべて計画書の「未確認事項」に記載)
+  - `docs/01_service_spec.md` / `docs/02_roadmap.md` への反映(オーナー承認前のため未実施)
+- 不明点・仮置き:
+  - 予算機能のF番号採番は未定(オーナー承認後)
+  - 北極星「完了」の代理指標を「共有画像生成あり」で仮置き(オーナー判断事項3)
+  - `docs/design/screens/S3b2_予算.md` は承認前の案であり仕様の正ではない
+- 成果物: `docs/design/notes/2026-07-28_予算機能の検討.md`、`docs/design/screens/S3b2_予算.md`
