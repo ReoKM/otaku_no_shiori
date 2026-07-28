@@ -33,7 +33,10 @@ export function FreeSpotForm({ onSave, onCancel }: FreeSpotFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 px-4 py-3">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-3 flex flex-col gap-2 rounded-2xl border border-paper-border bg-sakura-tint px-4 py-3.5"
+    >
       <input
         type="text"
         value={name}
@@ -46,11 +49,11 @@ export function FreeSpotForm({ onSave, onCancel }: FreeSpotFormProps) {
             setError(null);
           }
         }}
-        className={`h-11 w-full rounded-lg border bg-white px-3 text-base text-neutral-900 ${
-          error ? "border-red-400" : "border-neutral-200"
+        className={`min-h-12 w-full rounded-xl border-[1.5px] bg-white px-3.5 text-base font-medium text-ink outline-none ${
+          error ? "border-red-400" : "border-sakura-field"
         }`}
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
       <textarea
         value={memo}
         maxLength={SPOT_MEMO_MAX_LENGTH}
@@ -58,17 +61,21 @@ export function FreeSpotForm({ onSave, onCancel }: FreeSpotFormProps) {
         aria-label="メモ"
         onChange={(e) => setMemo(e.target.value)}
         rows={2}
-        className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-base text-neutral-900"
+        className="w-full rounded-xl border border-paper-dashed bg-white px-3.5 py-2.5 text-base font-medium text-ink outline-none"
       />
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="h-11 px-3 text-base text-neutral-500">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="min-h-11.5 flex-none rounded-xl border border-paper-dashed bg-white px-4.5 text-sm font-medium text-ink-label"
+        >
           キャンセル
         </button>
         <button
           type="submit"
-          className="h-11 rounded-lg bg-pink-500 px-4 text-base font-semibold text-white"
+          className="min-h-11.5 flex-1 rounded-xl bg-sakura text-[15px] font-bold text-white"
         >
-          追加
+          登録する
         </button>
       </div>
     </form>

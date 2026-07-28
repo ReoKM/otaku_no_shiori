@@ -3,11 +3,13 @@ import Link from "next/link";
 // スポットは独立タブにせず旅程タブ内で扱う(2026-07-11オーナー決定。docs/01_service_spec.md参照)
 export type ShioriTabId = "packing" | "todo" | "itinerary" | "log";
 
+// 表示名はリニューアルデザインに合わせて「やること」「記録」に変更した。
+// URLパス(/todo, /log)は既存リンク・SW のキャッシュルーティングを壊さないため据え置く。
 const TABS: { id: ShioriTabId; label: string }[] = [
   { id: "packing", label: "持ち物" },
-  { id: "todo", label: "TODO" },
+  { id: "todo", label: "やること" },
   { id: "itinerary", label: "旅程" },
-  { id: "log", label: "ログ" },
+  { id: "log", label: "記録" },
 ];
 
 interface TabBarProps {
@@ -18,13 +20,15 @@ interface TabBarProps {
 }
 
 /**
- * S3共通タブバー(持ち物/TODO/旅程/ログの4分割)。
+ * S3共通タブバー(持ち物/やること/旅程/記録の4分割)。
  * 参照: docs/design/screens/S3_しおり詳細.md「2. タブバー」
+ *
+ * 選択中は差し色の文字+下辺3pxのインクバーで示す。
  */
 export function TabBar({ shioriId, activeTab, disabled }: TabBarProps) {
   return (
     <nav
-      className={`grid grid-cols-4 border-b border-neutral-200 bg-white ${
+      className={`grid grid-cols-4 border-b border-paper-border bg-paper-surface ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
     >
@@ -34,10 +38,11 @@ export function TabBar({ shioriId, activeTab, disabled }: TabBarProps) {
           <Link
             key={tab.id}
             href={`/shiori/${shioriId}/${tab.id}`}
-            className={`flex h-11 items-center justify-center border-b-2 text-sm ${
+            aria-current={selected ? "page" : undefined}
+            className={`flex h-12 items-center justify-center text-[15px] tracking-[0.02em] ${
               selected
-                ? "border-pink-500 text-pink-500"
-                : "border-transparent text-neutral-500"
+                ? "font-bold text-sakura-ink shadow-[inset_0_-3px_0_var(--color-sakura)]"
+                : "font-medium text-ink-strong"
             }`}
           >
             {tab.label}

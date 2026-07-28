@@ -200,8 +200,8 @@ export function ItinerarySection({
 
   if (entries === null) {
     return (
-      <div className="flex flex-1 flex-col">
-        <ItineraryToolbar count={0} sortMode={false} onToggleSort={() => {}} sortAvailable={false} />
+      <div className="flex flex-1 flex-col px-6 pb-8">
+        <ItineraryToolbar count={0} dayCount={0} sortMode={false} onToggleSort={() => {}} sortAvailable={false} />
         <ItinerarySkeleton />
       </div>
     );
@@ -218,9 +218,16 @@ export function ItinerarySection({
       return a.sort_order - b.sort_order;
     });
     return (
-      <div className="flex flex-1 flex-col">
-        <ItineraryToolbar count={totalCount} sortMode={false} onToggleSort={() => {}} sortAvailable={false} />
+      <div className="flex flex-1 flex-col px-6 pb-8">
+        <ItineraryToolbar
+          count={totalCount}
+          dayCount={0}
+          sortMode={false}
+          onToggleSort={() => {}}
+          sortAvailable={false}
+        />
         <ItineraryFallback />
+        <div className="mt-3 overflow-hidden rounded-2xl border border-paper-border bg-paper-surface empty:hidden">
         {flatEntries.map((entry) => (
           <EntryRow
             key={entry.id}
@@ -250,6 +257,7 @@ export function ItinerarySection({
             onCancelDelete={handleCancelDelete}
           />
         ))}
+        </div>
       </div>
     );
   }
@@ -257,8 +265,13 @@ export function ItinerarySection({
   const groups = groupEntriesByDay(dayList, entries);
 
   return (
-    <div className="flex flex-1 flex-col">
-      <ItineraryToolbar count={totalCount} sortMode={sortMode} onToggleSort={handleToggleSort} />
+    <div className="flex flex-1 flex-col px-6 pb-8">
+      <ItineraryToolbar
+        count={totalCount}
+        dayCount={dayList.length}
+        sortMode={sortMode}
+        onToggleSort={handleToggleSort}
+      />
       <div className="flex flex-col">
         {groups.map((day) => (
           <DayBlock

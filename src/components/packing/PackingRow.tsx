@@ -1,140 +1,61 @@
 "use client";
 
-import { useState } from "react";
-import { validatePackingLabel, PACKING_LABEL_MAX_LENGTH } from "@/lib/packing-validation";
+import { ListCheckbox } from "@/components/list-ui/ListCheckbox";
+import { MoreIcon } from "@/components/list-ui/icons";
 import type { PackingItem } from "@/types/shiori";
 
 interface PackingRowProps {
   item: PackingItem;
+  /** 追加直後の行はハイライトを一度だけ流す。 */
+  flash: boolean;
   onToggleCheck: (id: string) => void;
-  onSaveLabel: (id: string, label: string) => void;
-  onDelete: (id: string) => void;
+  onOpenMenu: (item: PackingItem) => void;
 }
 
-type RowMode = "view" | "edit" | "delete-confirm";
-
 /**
- * S3a PackingRow(通常モード/編集中/削除確認中の1行)。
+ * S3a PackingRow(持ち物リストの1行、高さ68px)。
  * 参照: docs/design/screens/S3a_持ち物.md「PackingRow」
- * 行内の一時的な表示モード(編集中/削除確認中)はこの行の中だけで完結させる。
+ *
+ * 行全体をタップするとチェックが切り替わる。名前の編集・削除は右端の「…」から開く
+ * 行メニューシート(`RowActionSheet`)に集約する。
+ * 「…」はチェック切替のボタンの内側に置けないため、行はbuttonにせずdiv+role="button"にせず、
+ * チェック用のbuttonを行いっぱいに広げ、「…」をその隣に独立して置く構成にしている。
  */
-export function PackingRow({ item, onToggleCheck, onSaveLabel, onDelete }: PackingRowProps) {
-  const [mode, setMode] = useState<RowMode>("view");
-  const [draft, setDraft] = useState(item.label);
-  const [error, setError] = useState<string | null>(null);
-
-  function startEdit() {
-    setDraft(item.label);
-    setError(null);
-    setMode("edit");
-  }
-
-  function saveEdit() {
-    const validationError = validatePackingLabel(draft);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-    onSaveLabel(item.id, draft.trim());
-    setMode("view");
-  }
-
-  function cancelEdit() {
-    setError(null);
-    setMode("view");
-  }
-
-  if (mode === "delete-confirm") {
-    return (
-      <div className="flex min-h-14 items-center justify-between gap-2 border-b border-neutral-100 px-4">
-        <p className="text-xs text-neutral-500">本当に削除しますか？</p>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onDelete(item.id)}
-            className="flex h-11 items-center px-2 text-sm text-red-600"
-          >
-            削除
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("view")}
-            className="flex h-11 items-center px-2 text-sm text-neutral-500"
-          >
-            キャンセル
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === "edit") {
-    return (
-      <div className="flex min-h-14 items-center gap-2 border-b border-neutral-100 px-4">
-        <div className="min-w-0 flex-1">
-          <input
-            type="text"
-            value={draft}
-            maxLength={PACKING_LABEL_MAX_LENGTH}
-            onChange={(event) => setDraft(event.target.value)}
-            className={`h-11 w-full rounded-lg border px-3 text-base text-neutral-900 ${
-              error ? "border-red-400 bg-red-50" : "border-neutral-200 bg-white"
-            }`}
-          />
-          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-        </div>
-        <button
-          type="button"
-          aria-label="保存"
-          onClick={saveEdit}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-pink-500"
-        >
-          ✓
-        </button>
-        <button
-          type="button"
-          aria-label="編集をキャンセル"
-          onClick={cancelEdit}
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100"
-        >
-          ×
-        </button>
-      </div>
-    );
-  }
-
+export function PackingRow({ item, flash, onToggleCheck, onOpenMenu }: PackingRowProps) {
   return (
-    <div className="flex min-h-14 items-center gap-2 border-b border-neutral-100 px-4 transition-colors hover:bg-neutral-50">
-      <label className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
-        <input
-          type="checkbox"
-          checked={item.is_checked}
-          onChange={() => onToggleCheck(item.id)}
-          className="h-6 w-6 rounded-md border-neutral-200 accent-pink-500"
-        />
-      </label>
-      <p
-        className={`line-clamp-2 min-w-0 flex-1 text-base ${
-          item.is_checked ? "text-neutral-400 line-through" : "text-neutral-900"
-        }`}
-      >
-        {item.label}
-      </p>
+    <div
+      className={`flex min-h-17 items-center border-t border-paper-divider bg-paper-surface first:border-t-0 ${
+        flash ? "animate-[paper-flash_1.2s_ease]" : ""
+      }`}
+    >
       <button
         type="button"
-        aria-label="編集"
-        onClick={startEdit}
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100"
+        role="checkbox"
+        aria-checked={item.is_checked}
+        onClick={() => onToggleCheck(item.id)}
+        className="flex min-h-17 min-w-0 flex-1 items-center gap-3 py-1 pl-4 text-left"
       >
-        ✏️
+        <ListCheckbox checked={item.is_checked} />
+        <span
+          className={`line-clamp-2 min-w-0 flex-1 text-base/[1.4] ${
+            item.is_checked
+              ? "font-normal text-ink-done line-through decoration-[rgba(167,158,147,0.75)]"
+              : "font-medium text-ink"
+          }`}
+        >
+          {item.label}
+        </span>
+        {item.is_checked && (
+          <span className="flex-none text-[11px] font-bold tracking-[0.06em] text-ink-faint">済</span>
+        )}
       </button>
       <button
         type="button"
-        aria-label="削除"
-        onClick={() => setMode("delete-confirm")}
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100"
+        aria-label={`${item.label}の編集・削除`}
+        onClick={() => onOpenMenu(item)}
+        className="flex h-11 w-11 flex-none items-center justify-center text-ink-faint"
       >
-        🗑
+        <MoreIcon />
       </button>
     </div>
   );

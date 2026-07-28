@@ -1,41 +1,68 @@
+import { SortIcon } from "@/components/list-ui/icons";
+
 interface PackingToolbarProps {
   count: number;
   checkedCount: number;
-  sortMode: boolean;
-  onToggleSortMode: () => void;
+  /** 「完了済みを隠す/表示」の現在の状態。 */
+  showDone: boolean;
+  onToggleShowDone: () => void;
+  onOpenSortSheet: () => void;
+  /** 手動並べ替えモード中は抜けるためのボタンだけを出す。 */
+  manualSortMode: boolean;
+  onExitManualSort: () => void;
 }
 
 /**
- * S3a ツールバー行(件数表示+並べ替えボタン)。
+ * S3a ツールバー行(件数表示+完了済みの表示切替+並べ替え)。
  * 参照: docs/design/screens/S3a_持ち物.md「1. ツールバー行」
  *
- * 件数は総数・チェック済み・残りを1行で表示し、準備状況が一目で分かるようにする。
- * 「並べ替え」ボタンは項目が2件以上の時のみ表示する(仕様どおり)。
- * ただし並べ替えモード中に削除操作で1件以下に減った場合でも「完了」ボタンは
- * 表示し続け、ユーザーが並べ替えモードから抜けられなくなることを防ぐ(仮置き)。
+ * リストカードの外・カードの上に置き、件数とリストの左端を揃える。
+ * 「完了済みを隠す」は完了が1件以上あるときだけ出す(押しても何も変わらない状態を作らない)。
  */
 export function PackingToolbar({
   count,
   checkedCount,
-  sortMode,
-  onToggleSortMode,
+  showDone,
+  onToggleShowDone,
+  onOpenSortSheet,
+  manualSortMode,
+  onExitManualSort,
 }: PackingToolbarProps) {
   return (
-    <div className="flex h-11 items-center justify-between px-4">
-      <p className="text-sm text-neutral-500">
-        全{count}件
-        {count > 0 && (
-          <>
-            {" · "}
-            <span className="text-pink-500">済 {checkedCount}</span>
-            {" · "}残り {count - checkedCount}
-          </>
-        )}
-      </p>
-      {(count >= 2 || sortMode) && (
-        <button type="button" onClick={onToggleSortMode} className="text-sm text-neutral-900">
-          {sortMode ? "完了" : "並べ替え"}
+    <div className="flex items-center justify-between gap-2 pt-6 pb-3">
+      <span className="text-[13px] font-medium text-ink-sub">
+        {count === 0 ? "まだ登録がありません" : `全${count}件・残り${count - checkedCount}件`}
+      </span>
+      {manualSortMode ? (
+        <button
+          type="button"
+          onClick={onExitManualSort}
+          className="min-h-9 px-2 text-[13px] font-bold text-sakura-ink"
+        >
+          並べ替えを終える
         </button>
+      ) : (
+        <div className="flex items-center gap-1">
+          {checkedCount > 0 && (
+            <button
+              type="button"
+              onClick={onToggleShowDone}
+              className="min-h-9 px-2 text-[13px] font-medium text-ink-sub"
+            >
+              {showDone ? "完了済みを隠す" : "完了済みを表示"}
+            </button>
+          )}
+          {count >= 2 && (
+            <button
+              type="button"
+              onClick={onOpenSortSheet}
+              className="flex min-h-9 items-center gap-2 pr-1 pl-2 text-[13px] font-medium text-ink-strong"
+            >
+              <SortIcon />
+              並べ替え
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

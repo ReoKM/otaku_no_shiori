@@ -11,7 +11,7 @@ interface FieldTitleProps {
 export function FieldTitle({ value, onChange, error, disabled }: FieldTitleProps) {
   return (
     <div>
-      <label htmlFor="shiori-title" className="mb-1 block text-sm font-semibold text-neutral-900">
+      <label htmlFor="shiori-title" className="mb-1.5 block px-0.5 text-[13px] font-bold text-ink-label">
         タイトル ※必須
       </label>
       <input
@@ -21,17 +21,17 @@ export function FieldTitle({ value, onChange, error, disabled }: FieldTitleProps
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         placeholder="例: ○○ちゃん生誕祭 東京遠征"
-        className={`h-11 w-full rounded-lg border bg-white px-3 text-base text-neutral-900 placeholder:text-neutral-400 ${
-          error ? "border-red-400" : "border-neutral-200"
+        className={`min-h-12 w-full rounded-xl border-[1.5px] bg-white px-3.5 text-base font-medium text-ink outline-none placeholder:font-normal placeholder:text-ink-faint ${
+          error ? "border-red-400" : "border-paper-dashed focus:border-sakura-field"
         }`}
       />
       <div className="mt-1 flex items-center justify-between">
         {error ? (
-          <p className="text-xs text-red-600">{error}</p>
+          <p className="px-0.5 text-xs font-medium text-red-600">{error}</p>
         ) : (
           <span />
         )}
-        <p className="text-xs text-neutral-400">
+        <p className="px-0.5 text-xs text-ink-muted">
           {value.length}/{SHIORI_TITLE_MAX_LENGTH}
         </p>
       </div>

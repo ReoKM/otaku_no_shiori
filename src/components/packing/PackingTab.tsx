@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FollowFab } from "@/components/list-ui/FollowFab";
+import { RowActionSheet } from "@/components/list-ui/RowActionSheet";
+import { SortSheet } from "@/components/list-ui/SortSheet";
+import { UndoToast } from "@/components/list-ui/UndoToast";
 import {
   createPackingItem,
   deletePackingItem,
@@ -9,20 +13,31 @@ import {
   reorderPackingItems,
   updatePackingItem,
 } from "@/lib/guest-store";
-import { validatePackingLabel } from "@/lib/packing-validation";
+import {
+  applyListSortMode,
+  DEFAULT_SORT_MODE_BY_TAB,
+  loadListSortMode,
+  saveListSortMode,
+  SORT_MODES_BY_TAB,
+  type ListSortMode,
+} from "@/lib/list-sort-mode";
+import { PACKING_LABEL_MAX_LENGTH, validatePackingLabel } from "@/lib/packing-validation";
 import {
   isPackingTemplateSeeded,
   seedPackingTemplate,
 } from "@/lib/packing-template-seed";
 import { useDragSort } from "@/lib/use-drag-sort";
+import { useFollowFab } from "@/lib/use-follow-fab";
+import { useUndoToast } from "@/lib/use-undo-toast";
 import type { PackingItem, TripType } from "@/types/shiori";
-import { PackingToolbar } from "./PackingToolbar";
-import { PackingRow } from "./PackingRow";
-import { PackingRowSortMode } from "./PackingRowSortMode";
 import { EmptyPacking } from "./EmptyPacking";
 import { PackingAddForm } from "./PackingAddForm";
+import { PackingAllDoneBanner } from "./PackingAllDoneBanner";
 import { PackingListSkeleton } from "./PackingListSkeleton";
 import { PackingProgressCard } from "./PackingProgressCard";
+import { PackingRow } from "./PackingRow";
+import { PackingRowSortMode } from "./PackingRowSortMode";
+import { PackingToolbar } from "./PackingToolbar";
 
 interface PackingTabProps {
   shioriId: string;
@@ -42,9 +57,16 @@ export function PackingTab({ shioriId }: PackingTabProps) {
   const [loadedForId, setLoadedForId] = useState<string | null>(null);
   const [tripType, setTripType] = useState<TripType>("other");
   const [items, setItems] = useState<PackingItem[]>([]);
-  const [sortMode, setSortMode] = useState(false);
+  const [sortMode, setSortMode] = useState<ListSortMode>(DEFAULT_SORT_MODE_BY_TAB.packing);
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [showDone, setShowDone] = useState(true);
+  const [menuTarget, setMenuTarget] = useState<PackingItem | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [addValue, setAddValue] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
+  const [flashId, setFlashId] = useState<string | null>(null);
+
+  const undoToast = useUndoToast<PackingItem>();
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +95,10 @@ export function PackingTab({ shioriId }: PackingTabProps) {
       if (!cancelled) {
         setTripType(currentTripType);
         setItems(list);
-        setSortMode(false);
+        setSortMode(loadListSortMode(shioriId, "packing"));
+        setSortSheetOpen(false);
+        setShowDone(true);
+        setAddOpen(false);
         setLoadedForId(shioriId);
       }
     }
@@ -85,10 +110,36 @@ export function PackingTab({ shioriId }: PackingTabProps) {
   }, [shioriId]);
 
   const loading = loadedForId !== shioriId;
+  const manualSortMode = sortMode === "manual";
 
-  async function refresh() {
-    const list = await listPackingItemsByShiori(shioriId);
-    setItems(list);
+  const checkedCount = items.filter((item) => item.is_checked).length;
+
+  // 並び順モードを適用したうえで、「完了済みを隠す」がONなら未完了だけに絞る
+  const sortedItems = useMemo(
+    () => applyListSortMode(items, sortMode, (item) => item.is_checked),
+    [items, sortMode],
+  );
+  const visibleItems = useMemo(
+    () => (showDone ? sortedItems : sortedItems.filter((item) => !item.is_checked)),
+    [sortedItems, showDone],
+  );
+  const hiddenCount = sortedItems.length - visibleItems.length;
+
+  const hasList = items.length > 0 || addOpen;
+  const { visible: fabVisible, anchorRef: fabAnchor } = useFollowFab(
+    hasList && !manualSortMode && !addOpen,
+  );
+
+  function handlePickSortMode(mode: ListSortMode) {
+    setSortMode(mode);
+    saveListSortMode(shioriId, "packing", mode);
+    setSortSheetOpen(false);
+    // 手動並べ替え中は行の順序そのものを触るため、完了済みを隠したままだと
+    // 見えていない行を巻き込んで並べ替えてしまう。強制的に全件表示に戻す。
+    if (mode === "manual") {
+      setShowDone(true);
+      setAddOpen(false);
+    }
   }
 
   async function handleToggleCheck(id: string) {
@@ -103,32 +154,59 @@ export function PackingTab({ shioriId }: PackingTabProps) {
   async function handleSaveLabel(id: string, label: string) {
     const updated = await updatePackingItem(id, { label });
     setItems((prev) => prev.map((item) => (item.id === id ? updated : item)));
+    setMenuTarget(null);
   }
 
-  async function handleDelete(id: string) {
-    await deletePackingItem(id);
-    const remainingIds = items.filter((item) => item.id !== id).map((item) => item.id);
-    if (remainingIds.length > 0) {
-      await reorderPackingItems(shioriId, remainingIds);
+  async function handleDelete(target: PackingItem) {
+    setMenuTarget(null);
+    await deletePackingItem(target.id);
+    const remaining = items.filter((item) => item.id !== target.id);
+    setItems(remaining);
+    if (remaining.length > 0) {
+      await reorderPackingItems(
+        shioriId,
+        remaining.map((item) => item.id),
+      );
     }
-    await refresh();
+    undoToast.show(`「${target.label}」を削除しました`, target);
+  }
+
+  async function handleUndoDelete() {
+    const removed = undoToast.undo();
+    if (!removed) {
+      return;
+    }
+    // 元のidは復元できないため同じ名前で作り直す。削除前の位置ではなく末尾に戻る
+    // (guest-storeに任意位置への挿入APIが無いための仮置き)。
+    const restored = await createPackingItem({ shiori_id: shioriId, label: removed.label });
+    setItems((prev) => [...prev, restored]);
+    flashRow(restored.id);
   }
 
   async function handleDrop(newOrder: string[]) {
     const byId = new Map(items.map((item) => [item.id, item]));
-    const reordered = newOrder.map((id) => byId.get(id)).filter((item): item is PackingItem => !!item);
+    const reordered = newOrder
+      .map((id) => byId.get(id))
+      .filter((item): item is PackingItem => !!item);
+    // ドロップ直後にuseDragSortの暫定並びが解除されるため、DB書き込みを待つと
+    // 一瞬元の並びに戻って見える。先にローカルを更新する(楽観更新)。
     setItems(reordered);
     await reorderPackingItems(shioriId, newOrder);
   }
 
   const dragSort = useDragSort({
-    ids: items.map((item) => item.id),
+    ids: sortedItems.map((item) => item.id),
     onDrop: handleDrop,
   });
 
   async function handleAddFromTemplate() {
     const created = await seedPackingTemplate(shioriId, tripType);
     setItems(created);
+  }
+
+  function flashRow(id: string) {
+    setFlashId(id);
+    setTimeout(() => setFlashId((current) => (current === id ? null : current)), 1200);
   }
 
   async function handleAddSubmit() {
@@ -141,73 +219,125 @@ export function PackingTab({ shioriId }: PackingTabProps) {
     setItems((prev) => [...prev, created]);
     setAddValue("");
     setAddError(null);
+    flashRow(created.id);
+  }
+
+  function handleStartAdd() {
+    setAddOpen(true);
+    setAddValue("");
+    setAddError(null);
   }
 
   if (loading) {
     return <PackingListSkeleton />;
   }
 
-  const checkedCount = items.filter((item) => item.is_checked).length;
+  const duplicate =
+    addValue.trim().length > 0 && items.some((item) => item.label === addValue.trim());
 
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col gap-3 px-4 pt-4 pb-3">
-          {items.length > 0 && (
-            <PackingProgressCard total={items.length} checkedCount={checkedCount} />
-          )}
-          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-            <PackingToolbar
-              count={items.length}
-              checkedCount={checkedCount}
-              sortMode={sortMode}
-              onToggleSortMode={() => setSortMode((prev) => !prev)}
-            />
-            <div className="border-t border-neutral-200 [&>*:last-child]:border-b-0">
-              {items.length === 0 ? (
-                <EmptyPacking onAddFromTemplate={handleAddFromTemplate} />
-              ) : sortMode ? (
-                dragSort.order.map((id) => {
-                  const item = items.find((i) => i.id === id);
-                  if (!item) {
-                    return null;
-                  }
-                  return (
-                    <PackingRowSortMode
-                      key={item.id}
-                      item={item}
-                      isDragging={dragSort.draggingId === item.id}
-                      registerRow={dragSort.registerRow(item.id)}
-                      onHandlePointerDown={dragSort.onHandlePointerDown(item.id)}
-                    />
-                  );
-                })
-              ) : (
-                items.map((item) => (
-                  <PackingRow
+    <div className="flex flex-1 flex-col px-6 pt-5 pb-8">
+      <PackingProgressCard total={items.length} checkedCount={checkedCount} />
+      {items.length > 0 && checkedCount === items.length && <PackingAllDoneBanner />}
+
+      <PackingToolbar
+        count={items.length}
+        checkedCount={checkedCount}
+        showDone={showDone}
+        onToggleShowDone={() => setShowDone((prev) => !prev)}
+        onOpenSortSheet={() => setSortSheetOpen(true)}
+        manualSortMode={manualSortMode}
+        onExitManualSort={() => handlePickSortMode(DEFAULT_SORT_MODE_BY_TAB.packing)}
+      />
+
+      {!hasList ? (
+        <EmptyPacking onStartAdd={handleStartAdd} onAddFromTemplate={handleAddFromTemplate} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-paper-border bg-paper-surface">
+          {manualSortMode
+            ? dragSort.order.map((id) => {
+                const item = items.find((i) => i.id === id);
+                if (!item) {
+                  return null;
+                }
+                return (
+                  <PackingRowSortMode
                     key={item.id}
                     item={item}
-                    onToggleCheck={handleToggleCheck}
-                    onSaveLabel={handleSaveLabel}
-                    onDelete={handleDelete}
+                    isDragging={dragSort.draggingId === item.id}
+                    registerRow={dragSort.registerRow(item.id)}
+                    onHandlePointerDown={dragSort.onHandlePointerDown(item.id)}
                   />
-                ))
-              )}
+                );
+              })
+            : visibleItems.map((item) => (
+                <PackingRow
+                  key={item.id}
+                  item={item}
+                  flash={flashId === item.id}
+                  onToggleCheck={handleToggleCheck}
+                  onOpenMenu={setMenuTarget}
+                />
+              ))}
+
+          {!manualSortMode && (
+            <div ref={fabAnchor}>
+              <PackingAddForm
+                open={addOpen}
+                value={addValue}
+                error={addError}
+                duplicate={duplicate}
+                onOpen={handleStartAdd}
+                onChange={(value) => {
+                  setAddValue(value);
+                  if (addError) {
+                    setAddError(null);
+                  }
+                }}
+                onSubmit={handleAddSubmit}
+                onCancel={() => {
+                  setAddOpen(false);
+                  setAddValue("");
+                  setAddError(null);
+                }}
+              />
             </div>
-          </div>
+          )}
         </div>
-      </div>
-      <PackingAddForm
-        value={addValue}
-        error={addError}
-        onChange={(value) => {
-          setAddValue(value);
-          if (addError) {
-            setAddError(null);
-          }
-        }}
-        onSubmit={handleAddSubmit}
-      />
+      )}
+
+      {hiddenCount > 0 && (
+        <p className="mt-3 text-center text-[12.5px] font-medium text-ink-muted">
+          完了済み{hiddenCount}件を非表示中
+        </p>
+      )}
+
+      {fabVisible && <FollowFab label="持ち物を追加" onClick={handleStartAdd} />}
+
+      {undoToast.toast && (
+        <UndoToast message={undoToast.toast.message} onUndo={handleUndoDelete} />
+      )}
+
+      {sortSheetOpen && (
+        <SortSheet
+          modes={SORT_MODES_BY_TAB.packing}
+          current={sortMode}
+          onPick={handlePickSortMode}
+          onClose={() => setSortSheetOpen(false)}
+        />
+      )}
+
+      {menuTarget && (
+        <RowActionSheet
+          title={menuTarget.label}
+          initialLabel={menuTarget.label}
+          maxLength={PACKING_LABEL_MAX_LENGTH}
+          validate={validatePackingLabel}
+          onSave={(label) => handleSaveLabel(menuTarget.id, label)}
+          onDelete={() => handleDelete(menuTarget)}
+          onClose={() => setMenuTarget(null)}
+        />
+      )}
     </div>
   );
 }

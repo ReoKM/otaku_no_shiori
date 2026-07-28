@@ -7,10 +7,10 @@ import { ShioriCreateForm } from "@/components/shiori-form/ShioriCreateForm";
  */
 export default function NewShioriPage() {
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
-      <header className="sticky top-0 z-10 flex items-center border-b border-neutral-200 bg-white">
+    <div className="flex min-h-full flex-1 flex-col bg-paper">
+      <header className="sticky top-0 z-30 flex items-center border-b border-paper-border bg-paper-surface px-6 py-3">
         <BackButton />
-        <h1 className="mx-auto pr-11 text-xl font-bold text-neutral-900">しおりを作る</h1>
+        <h1 className="mx-auto pr-8 text-xl font-black tracking-[0.01em] text-ink">しおりを作る</h1>
       </header>
       <ShioriCreateForm />
     </div>

@@ -37,10 +37,14 @@ export function LogPhotoCardEditing({
   const atMaxLength = caption.length >= PHOTO_CAPTION_MAX_LENGTH;
 
   return (
-    <div className="col-span-3 flex flex-col gap-2 rounded-lg border border-neutral-200 p-3">
-      <div className="aspect-square w-24 overflow-hidden rounded-lg bg-neutral-100">
-        {/* eslint-disable-next-line @next/next/no-img-element -- IndexedDBのBlobをObjectURL表示するためnext/imageの最適化対象外 */}
-        <img src={url} alt="" className="h-full w-full object-cover" />
+    <div className="col-span-3 flex flex-col gap-2 rounded-2xl border border-paper-border bg-sakura-tint p-3.5">
+      <div className="aspect-square w-24 overflow-hidden rounded-xl border border-paper-border bg-paper-track">
+        {/* 初回レンダー(ObjectURL確保前)は空文字が返る。src=""はページ全体の再取得を
+            招くブラウザ挙動があるため、URLが確定するまでimg自体を描画しない */}
+        {url && (
+          // eslint-disable-next-line @next/next/no-img-element -- IndexedDBのBlobをObjectURL表示するためnext/imageの最適化対象外
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        )}
       </div>
       <div>
         <input
@@ -49,9 +53,9 @@ export function LogPhotoCardEditing({
           maxLength={PHOTO_CAPTION_MAX_LENGTH}
           placeholder="ひとことメモ(任意)"
           onChange={(e) => onCaptionChange(e.target.value)}
-          className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+          className="min-h-12 w-full rounded-xl border-[1.5px] border-sakura-field bg-white px-3.5 text-base font-medium text-ink outline-none"
         />
-        <p className={`text-right text-xs ${atMaxLength ? "text-red-600" : "text-neutral-400"}`}>
+        <p className={`text-right text-xs ${atMaxLength ? "font-medium text-red-600" : "text-ink-muted"}`}>
           {caption.length}/{PHOTO_CAPTION_MAX_LENGTH}
         </p>
       </div>
@@ -60,35 +64,33 @@ export function LogPhotoCardEditing({
           type="date"
           value={dayDate}
           onChange={(e) => onDayDateChange(e.target.value)}
-          className="h-11 flex-1 rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+          className="min-h-12 flex-1 rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
         />
         {dayDate && (
           <button
             type="button"
             onClick={onClearDayDate}
             aria-label="日付をクリア"
-            className="flex h-11 w-11 items-center justify-center text-neutral-500"
+            className="flex h-11 w-11 items-center justify-center text-ink-label"
           >
             ×
           </button>
         )}
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="flex gap-2">
         <button
           type="button"
-          aria-label="保存"
-          onClick={onSave}
-          className="flex h-11 w-11 items-center justify-center text-lg text-pink-500"
+          onClick={onCancel}
+          className="min-h-11.5 flex-none rounded-xl border border-paper-dashed bg-white px-4.5 text-sm font-medium text-ink-label"
         >
-          ✓
+          キャンセル
         </button>
         <button
           type="button"
-          aria-label="編集をキャンセル"
-          onClick={onCancel}
-          className="flex h-11 w-11 items-center justify-center text-lg text-neutral-500"
+          onClick={onSave}
+          className="min-h-11.5 flex-1 rounded-xl bg-sakura text-[15px] font-bold text-white"
         >
-          ×
+          保存する
         </button>
       </div>
     </div>

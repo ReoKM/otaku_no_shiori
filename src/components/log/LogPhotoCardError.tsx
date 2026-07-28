@@ -14,7 +14,7 @@ export function LogPhotoCardError({ onDismiss }: LogPhotoCardErrorProps) {
         type="button"
         onClick={onDismiss}
         aria-label="読み込み失敗の項目を取り消す"
-        className="flex aspect-square w-full items-center justify-center rounded-lg bg-neutral-200 text-2xl text-neutral-400"
+        className="flex aspect-square w-full items-center justify-center rounded-xl bg-paper-track text-2xl text-ink-muted"
       >
         ×
       </button>

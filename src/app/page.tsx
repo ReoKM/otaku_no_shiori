@@ -41,19 +41,20 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-neutral-50">
-      <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white px-4 py-4">
-        <p className="text-xl font-bold text-neutral-900">オタクのしおり</p>
+    <div className="flex min-h-full flex-1 flex-col bg-paper">
+      <header className="sticky top-0 z-30 border-b border-paper-border bg-paper-surface px-6 py-4">
+        <p className="text-xl font-black tracking-[0.01em] text-ink">オタクのしおり</p>
       </header>
-      <main className="flex flex-1 flex-col gap-8 px-4 py-4">
+      <main className="flex flex-1 flex-col gap-8 px-6 pt-5 pb-8">
         {state === "loading" && <ShioriListSkeleton />}
         {state === "error" && (
-          <div className="flex flex-col items-center gap-3 py-8 text-center">
-            <p className="text-red-600">しおりの読み込みに失敗しました</p>
+          <div className="rounded-2xl border border-dashed border-paper-dashed bg-paper-surface px-5 py-8 text-center">
+            <p className="text-[15px] font-bold text-ink-strong">しおりを読み込めませんでした</p>
+            <p className="mt-2 text-[13px] text-ink-sub">通信は使っていないので、開き直すと直ることがあります</p>
             <button
               type="button"
               onClick={handleReload}
-              className="h-11 rounded-lg border border-pink-500 px-4 text-pink-500"
+              className="mt-5 min-h-12 w-full rounded-btn border border-sakura-border bg-white text-[15px] font-bold text-sakura-ink"
             >
               再読み込み
             </button>
@@ -71,11 +72,17 @@ export default function Home() {
           ))}
         <AdSlotPlaceholder />
       </main>
-      <footer className="flex items-center justify-center gap-6 px-4 pb-6 pt-2">
-        <Link href="/terms" className="text-xs text-neutral-400 underline-offset-2 hover:underline">
+      {/* しおりが1件以上あるときは右下に追従ボタンが出るため、フッターのリンクが
+          隠れないよう下余白を広げる */}
+      <footer
+        className={`flex items-center justify-center gap-6 px-6 pt-2 ${
+          state === "ready" && shioriList.length > 0 ? "pb-24" : "pb-6"
+        }`}
+      >
+        <Link href="/terms" className="text-xs text-ink-muted underline-offset-2 hover:underline">
           利用規約
         </Link>
-        <Link href="/privacy" className="text-xs text-neutral-400 underline-offset-2 hover:underline">
+        <Link href="/privacy" className="text-xs text-ink-muted underline-offset-2 hover:underline">
           プライバシーポリシー
         </Link>
       </footer>

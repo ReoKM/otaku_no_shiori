@@ -2,6 +2,7 @@
  * S3c DayBlock(日ブロック)。
  * 参照: docs/design/screens/S3c_旅程スポット.md「DayBlock(日ブロック)」
  */
+import { PlusIcon } from "@/components/list-ui/icons";
 import { canMoveDownInDay, canMoveUpInDay } from "@/lib/itinerary-sort";
 import type { ItineraryDayGroup, ItineraryDayInfo } from "@/lib/itinerary-days";
 import type { ItineraryEntry } from "@/types/shiori";
@@ -75,68 +76,73 @@ export function DayBlock({
   onMoveDown,
 }: DayBlockProps) {
   return (
-    <section>
-      <h2 className="px-4 py-3 text-lg font-bold text-neutral-900">{day.label}</h2>
-      {day.entries.length === 0 && !addFormOpen ? (
-        <EmptyDay onAdd={onOpenAddForm} />
-      ) : (
-        day.entries.map((entry, index) => {
-          function rowMode(): EntryRowMode {
-            if (editDraft?.id === entry.id) {
-              return "edit";
+    <section className="mt-5">
+      <h2 className="px-0.5 pb-2.5 text-base font-black text-ink">{day.label}</h2>
+      <div className="overflow-hidden rounded-2xl border border-paper-border bg-paper-surface">
+        {day.entries.length === 0 && !addFormOpen ? (
+          <EmptyDay />
+        ) : (
+          day.entries.map((entry, index) => {
+            function rowMode(): EntryRowMode {
+              if (editDraft?.id === entry.id) {
+                return "edit";
+              }
+              if (deletingId === entry.id) {
+                return "delete";
+              }
+              return "view";
             }
-            if (deletingId === entry.id) {
-              return "delete";
-            }
-            return "view";
-          }
 
-          return sortMode ? (
-            <EntryRowSortMode
-              key={entry.id}
-              entry={entry}
-              canMoveUp={canMoveUpInDay(day.entries, index)}
-              canMoveDown={canMoveDownInDay(day.entries, index)}
-              onMoveUp={() => onMoveUp(index)}
-              onMoveDown={() => onMoveDown(index)}
-            />
-          ) : (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              mode={rowMode()}
-              highlighted={highlightEntryId === entry.id}
-              dayOptions={dayOptions}
-              onStartEdit={() => onStartEdit(entry)}
-              onStartDelete={() => onStartDelete(entry)}
-              editTime={editDraft?.id === entry.id ? editDraft.time : ""}
-              editTitle={editDraft?.id === entry.id ? editDraft.title : ""}
-              editPlaceName={editDraft?.id === entry.id ? editDraft.placeName : ""}
-              editMemo={editDraft?.id === entry.id ? editDraft.memo : ""}
-              editDayDate={editDraft?.id === entry.id ? editDraft.dayDate : entry.day_date}
-              editError={editDraft?.id === entry.id ? editDraft.error : null}
-              onEditTimeChange={onEditTimeChange}
-              onEditTitleChange={onEditTitleChange}
-              onEditPlaceNameChange={onEditPlaceNameChange}
-              onEditMemoChange={onEditMemoChange}
-              onEditDayDateChange={onEditDayDateChange}
-              onClearEditTime={onClearEditTime}
-              onSaveEdit={onSaveEdit}
-              onCancelEdit={onCancelEdit}
-              onConfirmDelete={() => onConfirmDelete(entry)}
-              onCancelDelete={onCancelDelete}
-            />
-          );
-        })
-      )}
-      {!sortMode && day.entries.length > 0 && !addFormOpen && (
-        <div className="px-4 py-2">
-          <button type="button" onClick={onOpenAddForm} className="h-11 text-sm font-semibold text-pink-500">
-            ＋ 予定を追加
+            return sortMode ? (
+              <EntryRowSortMode
+                key={entry.id}
+                entry={entry}
+                canMoveUp={canMoveUpInDay(day.entries, index)}
+                canMoveDown={canMoveDownInDay(day.entries, index)}
+                onMoveUp={() => onMoveUp(index)}
+                onMoveDown={() => onMoveDown(index)}
+              />
+            ) : (
+              <EntryRow
+                key={entry.id}
+                entry={entry}
+                mode={rowMode()}
+                highlighted={highlightEntryId === entry.id}
+                dayOptions={dayOptions}
+                onStartEdit={() => onStartEdit(entry)}
+                onStartDelete={() => onStartDelete(entry)}
+                editTime={editDraft?.id === entry.id ? editDraft.time : ""}
+                editTitle={editDraft?.id === entry.id ? editDraft.title : ""}
+                editPlaceName={editDraft?.id === entry.id ? editDraft.placeName : ""}
+                editMemo={editDraft?.id === entry.id ? editDraft.memo : ""}
+                editDayDate={editDraft?.id === entry.id ? editDraft.dayDate : entry.day_date}
+                editError={editDraft?.id === entry.id ? editDraft.error : null}
+                onEditTimeChange={onEditTimeChange}
+                onEditTitleChange={onEditTitleChange}
+                onEditPlaceNameChange={onEditPlaceNameChange}
+                onEditMemoChange={onEditMemoChange}
+                onEditDayDateChange={onEditDayDateChange}
+                onClearEditTime={onClearEditTime}
+                onSaveEdit={onSaveEdit}
+                onCancelEdit={onCancelEdit}
+                onConfirmDelete={() => onConfirmDelete(entry)}
+                onCancelDelete={onCancelDelete}
+              />
+            );
+          })
+        )}
+        {addFormOpen && <AddEntryForm onSave={onSaveAddForm} onCancel={onCancelAddForm} />}
+        {!sortMode && !addFormOpen && (
+          <button
+            type="button"
+            onClick={onOpenAddForm}
+            className="flex min-h-14 w-full items-center gap-2 border-t border-paper-divider bg-paper-surface px-4 text-left text-[14.5px] font-bold text-sakura-ink"
+          >
+            <PlusIcon size={17} />
+            予定を追加
           </button>
-        </div>
-      )}
-      {addFormOpen && <AddEntryForm onSave={onSaveAddForm} onCancel={onCancelAddForm} />}
+        )}
+      </div>
     </section>
   );
 }

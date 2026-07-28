@@ -9,6 +9,8 @@ import { CoverAvatar } from "./CoverAvatar";
 /**
  * しおり一覧の1件分カード。
  * 参照: docs/design/screens/S1_ホーム一覧.md「ShioriCard」
+ *
+ * S3のリスト行と同じ「紙のカード+シェブロン」の作りに揃える。
  */
 export function ShioriCard({ shiori }: { shiori: Shiori }) {
   const router = useRouter();
@@ -18,18 +20,30 @@ export function ShioriCard({ shiori }: { shiori: Shiori }) {
     <button
       type="button"
       onClick={() => router.push(`/shiori/${shiori.id}/packing`)}
-      className="flex w-full items-center gap-4 rounded-xl border border-neutral-200 bg-white p-4 text-left"
+      className="flex w-full items-center gap-3.5 rounded-2xl border border-paper-border bg-paper-surface p-4 text-left"
     >
       <CoverAvatar cover={shiori.cover} />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="truncate text-base font-semibold text-neutral-900">
-          {shiori.title}
-        </p>
-        {dateRange && <p className="text-sm text-neutral-500">{dateRange}</p>}
-        <span className="inline-flex w-fit items-center rounded-full bg-pink-100 px-2 py-1 text-xs text-pink-700">
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="truncate text-base font-bold text-ink">{shiori.title}</span>
+        {dateRange && <span className="text-[12.5px] font-medium text-ink-sub">{dateRange}</span>}
+        <span className="mt-0.5 inline-flex w-fit items-center rounded-full bg-sakura-soft px-2 py-0.5 text-xs font-bold text-sakura-ink">
           {getTripTypeLabel(shiori.trip_type)}
         </span>
-      </div>
+      </span>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 18 18"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className="flex-none text-ink-faint"
+      >
+        <path d="M6.5 3.5 12.5 9l-6 5.5" />
+      </svg>
     </button>
   );
 }

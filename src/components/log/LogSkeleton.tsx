@@ -4,9 +4,12 @@
  */
 export function LogSkeleton() {
   return (
-    <div className="grid grid-cols-3 gap-2 px-4 py-4" aria-hidden="true">
+    <div className="grid grid-cols-3 gap-2 pt-2" aria-hidden="true">
       {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="aspect-square animate-pulse rounded-lg bg-neutral-200" />
+        <div
+          key={index}
+          className="aspect-square animate-pulse rounded-xl border border-paper-border bg-paper-track"
+        />
       ))}
     </div>
   );

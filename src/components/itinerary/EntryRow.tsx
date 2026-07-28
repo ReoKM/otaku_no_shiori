@@ -76,7 +76,7 @@ export function EntryRow({
   onConfirmDelete,
   onCancelDelete,
 }: EntryRowProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLButtonElement>(null);
 
   // Issue #63: 強調表示対象になったタイミングで、この行の位置までスクロールする。
   useEffect(() => {
@@ -87,50 +87,60 @@ export function EntryRow({
 
   if (mode === "edit") {
     return (
-      <div className="flex flex-col gap-2 border-b border-neutral-200 px-4 py-3">
+      <div className="flex flex-col gap-2 border-t border-paper-divider bg-sakura-tint px-4 py-3.5 first:border-t-0">
+        <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">時刻(任意)</span>
         <div className="flex items-center gap-2">
           <input
             type="time"
             value={editTime}
             aria-label="時刻"
             onChange={(e) => onEditTimeChange(e.target.value)}
-            className="h-11 flex-1 rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+            className="min-h-12 flex-1 rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
           />
           {editTime && (
-            <button type="button" onClick={onClearEditTime} className="text-xs text-neutral-500 underline">
+            <button type="button" onClick={onClearEditTime} className="text-xs font-medium text-ink-label underline">
               時刻を削除
             </button>
           )}
         </div>
+        <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">予定名</span>
         <input
           type="text"
+          aria-label="予定名"
           value={editTitle}
           maxLength={ITINERARY_TITLE_MAX_LENGTH}
           onChange={(e) => onEditTitleChange(e.target.value)}
-          className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+          className="min-h-12 w-full rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
         />
-        {editError && <p className="text-xs text-red-600">{editError}</p>}
+        {editError && <p className="text-xs font-medium text-red-600">{editError}</p>}
+        <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">場所(任意)</span>
         <input
           type="text"
+          aria-label="場所"
           value={editPlaceName}
           maxLength={ITINERARY_PLACE_NAME_MAX_LENGTH}
           placeholder="例: 東京ビッグサイト"
           onChange={(e) => onEditPlaceNameChange(e.target.value)}
-          className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+          className="min-h-12 w-full rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
         />
+        <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">メモ(任意)</span>
         <textarea
+          aria-label="メモ"
           value={editMemo}
           maxLength={ITINERARY_MEMO_MAX_LENGTH}
           rows={2}
           onChange={(e) => onEditMemoChange(e.target.value)}
-          className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-base text-neutral-900"
+          className="w-full rounded-xl border border-paper-dashed bg-white px-3.5 py-2.5 text-base font-medium text-ink outline-none"
         />
+        {dayOptions && (
+          <span className="block px-0.5 pb-1 text-xs font-medium text-ink-muted">日付</span>
+        )}
         {dayOptions && (
           <select
             aria-label="日付"
             value={editDayDate}
             onChange={(e) => onEditDayDateChange(e.target.value)}
-            className="h-11 w-full rounded-lg border border-neutral-200 bg-white px-3 text-base text-neutral-900"
+            className="min-h-12 w-full rounded-xl border border-paper-dashed bg-white px-3.5 text-base font-medium text-ink outline-none"
           >
             {dayOptions.map((day) => (
               <option key={day.date} value={day.date}>
@@ -139,42 +149,64 @@ export function EntryRow({
             ))}
           </select>
         )}
-        <div className="flex justify-end gap-2">
+        <div className="flex gap-2">
           <button
             type="button"
-            aria-label="保存"
-            onClick={onSaveEdit}
-            className="flex h-11 w-11 items-center justify-center text-lg text-pink-500"
+            onClick={onCancelEdit}
+            className="min-h-11.5 flex-none rounded-xl border border-paper-dashed bg-white px-4.5 text-sm font-medium text-ink-label"
           >
-            ✓
+            キャンセル
           </button>
           <button
             type="button"
-            aria-label="編集をキャンセル"
-            onClick={onCancelEdit}
-            className="flex h-11 w-11 items-center justify-center text-lg text-neutral-500"
+            onClick={onSaveEdit}
+            className="min-h-11.5 flex-1 rounded-xl bg-sakura text-[15px] font-bold text-white"
           >
-            ×
+            保存する
           </button>
         </div>
+        {/* 予定名の行をタップして開く「詳細」を兼ねるため、地図と削除の導線もここに置く */}
+        {entry.place_name && (
+          <a
+            href={buildGoogleMapsSearchUrl(entry.place_name)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-11 items-center justify-center text-[13px] font-bold text-sakura-ink"
+          >
+            地図で見る
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={onStartDelete}
+          className="min-h-11 w-full rounded-xl text-[13px] font-bold text-red-600"
+        >
+          この予定を削除する
+        </button>
       </div>
     );
   }
 
   if (mode === "delete") {
     return (
-      <div className="flex min-h-14 items-center justify-between gap-2 border-b border-neutral-200 px-4">
-        <p className="text-xs text-neutral-700">本当に削除しますか？</p>
-        <div className="flex shrink-0 gap-2">
+      <div className="flex min-h-18 items-center justify-between gap-2 border-t border-paper-divider bg-paper-surface px-4 first:border-t-0">
+        <p className="min-w-0 flex-1 text-[13px] text-ink">
+          「{entry.title}」を削除します。よろしいですか?
+        </p>
+        <div className="flex shrink-0 gap-1">
+          <button
+            type="button"
+            onClick={onCancelDelete}
+            className="min-h-11 px-3 text-[13px] font-medium text-ink-label"
+          >
+            キャンセル
+          </button>
           <button
             type="button"
             onClick={onConfirmDelete}
-            className="h-11 px-3 text-sm font-semibold text-red-600"
+            className="min-h-11 px-3 text-[13px] font-bold text-red-600"
           >
-            削除
-          </button>
-          <button type="button" onClick={onCancelDelete} className="h-11 px-3 text-sm text-neutral-500">
-            キャンセル
+            削除する
           </button>
         </div>
       </div>
@@ -182,47 +214,71 @@ export function EntryRow({
   }
 
   return (
-    <div
+    <button
+      type="button"
       ref={rowRef}
-      className={`flex flex-col gap-1 border-b border-neutral-200 px-4 py-3 ${
-        highlighted ? "bg-pink-100" : ""
+      onClick={onStartEdit}
+      className={`flex min-h-18 w-full items-center gap-3 border-t border-paper-divider px-4 py-2.5 text-left first:border-t-0 ${
+        highlighted ? "bg-sakura-soft" : "bg-paper-surface"
       }`}
     >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            {entry.time && <span className="text-sm text-neutral-500">{entry.time}</span>}
-            <p className="text-base text-neutral-900">{entry.title}</p>
-          </div>
-          {entry.place_name && (
-            <a
-              href={buildGoogleMapsSearchUrl(entry.place_name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-pink-500"
-            >
-              📍 {entry.place_name}
-            </a>
-          )}
-          {entry.memo && <p className="whitespace-pre-wrap text-sm text-neutral-500">{entry.memo}</p>}
-        </div>
-        <button
-          type="button"
-          aria-label="編集"
-          onClick={onStartEdit}
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
-        >
-          ✎
-        </button>
-        <button
-          type="button"
-          aria-label="削除"
-          onClick={onStartDelete}
-          className="flex h-11 w-11 shrink-0 items-center justify-center text-neutral-500"
-        >
-          🗑
-        </button>
-      </div>
-    </div>
+      {/* 時刻の桁数に関わらず予定名の左端が揃うよう、時刻の幅を固定する */}
+      <span className="w-13 flex-none text-[13px] font-bold tracking-[0.02em] text-sakura-ink">
+        {entry.time ?? ""}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base/[1.4] font-medium text-ink">{entry.title}</span>
+        {entry.place_name && (
+          <span className="mt-1 flex items-center gap-1.5">
+            <PinIcon />
+            <span className="min-w-0 truncate text-[12.5px] text-ink-sub">{entry.place_name}</span>
+          </span>
+        )}
+        {entry.memo && (
+          <span className="mt-1 block line-clamp-2 text-[12.5px] whitespace-pre-wrap text-ink-muted">
+            {entry.memo}
+          </span>
+        )}
+      </span>
+      <ChevronIcon />
+    </button>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+      className="flex-none text-ink-muted"
+    >
+      <path d="M6 10.5s3.6-3.4 3.6-5.8A3.6 3.6 0 0 0 2.4 4.7C2.4 7.1 6 10.5 6 10.5Z" />
+      <circle cx="6" cy="4.8" r="1.1" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="flex-none text-ink-faint"
+    >
+      <path d="M6.5 3.5 12.5 9l-6 5.5" />
+    </svg>
   );
 }

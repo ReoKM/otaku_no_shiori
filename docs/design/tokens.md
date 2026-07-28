@@ -2,58 +2,82 @@
 
 参照: `docs/01_service_spec.md`(非機能要件: スマホ375px幅基準)、`docs/03_tech_stack.md`(Tailwind CSS v4構成)
 
-対象: `docs/design/screens/` 配下の全画面仕様。生の16進数(`#F472B6`等)は画面仕様では使わず、本ファイルのトークン名で指定する。
+対象: `docs/design/screens/` 配下の全画面仕様。生の16進数(`#D6146F`等)は画面仕様でも実装でも使わず、本ファイルのトークン名で指定する。
 
-本プロジェクトはTailwind CSS v4(`src/app/globals.css`で`@import "tailwindcss"` + `@theme inline`)を採用済み。下記トークンはTailwindの**デフォルトパレット**(neutral/pink/red/amber等)をそのまま使う運用とし、独自のtailwind.config拡張は前提にしない(将来ブランド色を追加する場合は`globals.css`の`@theme`ブロックを拡張し、本表のTailwindクラス列を更新すること)。
+本プロジェクトはTailwind CSS v4を採用する。トークンの実体は `src/app/globals.css` の `@theme` ブロックに定義してあり、画面側はそこから生成される
+ユーティリティ(`bg-paper-surface` / `text-ink-sub` / `border-paper-divider` など)で参照する。**Tailwindのデフォルトパレット(neutral/pink等)は新規実装では使わない。**
+
+配色は「紙テイスト(フラット案)」に統一する。生成りの紙面(paper)・こげ茶のインク(ink)・桜色の差し色(sakura)の3系統で構成し、
+明るい面を前提にした配色のためダークテーマは持たない。
 
 ## 1. カラートークン
 
-### 1-1. ブランド/プライマリ
+### 1-1. 差し色(sakura)
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+| トークン名 | Tailwindクラス例 | 値 | 用途 |
 |---|---|---|---|
-| `color-primary` | メインCTAボタン背景、選択中タブ・チップの強調色 | `bg-pink-500` / `text-pink-500` / `border-pink-500` | #ec4899 |
-| `color-primary-hover` | プライマリボタンのhover/active/押下時 | `bg-pink-600` | #db2777 |
-| `color-primary-soft` | 選択済みチップ・バッジの背景(薄) | `bg-pink-100` | #fce7f3 |
-| `color-primary-soft-text` | `color-primary-soft` 背景上の文字 | `text-pink-700` | #be185d |
+| `sakura` | `bg-sakura` | #D6146F | 主CTAボタン背景、チェック済みボックス、進捗バー、タブの下線 |
+| `sakura-ink` | `text-sakura-ink` | #B01260 | 紙面上に置くピンクの文字(コントラスト確保のため背景色より濃い) |
+| `sakura-soft` | `bg-sakura-soft` | #FDEEF5 | 選択中の項目背景、達成メッセージの帯 |
+| `sakura-tint` | `bg-sakura-tint` | #FFF7FB | インライン追加フォームの背景 |
+| `sakura-border` | `border-sakura-border` | #EFC3D9 | 白地ピンク文字ボタンの枠線、追従ボタンの枠線 |
+| `sakura-field` | `border-sakura-field` | #E4A0C2 | 入力欄の枠線(入力中) |
+| `sakura-undo` | `text-sakura-undo` | #FF9BC8 | 暗色トースト上の「元に戻す」文字 |
 
-### 1-2. ニュートラル(背景・境界・テキスト)
+### 1-2. 面(paper)
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+| トークン名 | Tailwindクラス例 | 値 | 用途 |
 |---|---|---|---|
-| `color-bg-app` | 画面全体の背景 | `bg-neutral-50` | #fafafa |
-| `color-bg-surface` | カード・入力欄・モーダルの背景 | `bg-white` | #ffffff |
-| `color-border-default` | カード枠線・入力欄の通常枠線 | `border-neutral-200` | #e5e5e5 |
-| `color-border-strong` | 入力欄フォーカス時の枠線 | `border-neutral-400` | #a3a3a3 |
-| `color-text-primary` | 本文・見出し・入力値 | `text-neutral-900` | #171717 |
-| `color-text-secondary` | 補足テキスト(日程・遠征タイプラベル等) | `text-neutral-500` | #737373 |
-| `color-text-muted` | プレースホルダー・注意書き | `text-neutral-400` | #a3a3a3 |
-| `color-text-disabled` | 無効化ボタン・無効化項目の文字 | `text-neutral-400` | #a3a3a3 |
-| `color-bg-disabled` | 無効化ボタンの背景 | `bg-neutral-200` | #e5e5e5 |
+| `paper` | `bg-paper` | #FDFBF7 | 画面全体の背景 |
+| `paper-surface` | `bg-paper-surface` | #FFFDF8 | カード・ヘッダー・タブバー・リスト行の背景 |
+| `paper-border` | `border-paper-border` | #E6E1D9 | カードの外枠線、タブバー下端 |
+| `paper-divider` | `border-paper-divider` | #EEE8DE | カード内のリスト行の区切り線 |
+| `paper-dashed` | `border-paper-dashed` | #DCD5C8 | 破線枠(空状態カード・写真追加タイル) |
+| `paper-track` | `bg-paper-track` | #EBE5DA | 進捗バーの溝、スケルトン |
+| `paper-track-border` | `border-paper-track-border` | #DED7CA | 進捗バーの溝の枠線 |
+| `paper-flash` | (`animate-[paper-flash]`) | #FFF4DA | 項目を追加した直後の行のハイライト(1.2秒でフェード) |
 
-### 1-3. エラー
+### 1-3. 文字(ink)
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+上から順に濃い。用途を跨いだ流用はしない。
+
+| トークン名 | Tailwindクラス例 | 値 | 用途 |
 |---|---|---|---|
-| `color-error` | エラーメッセージの文字・アイコン | `text-red-600` | #dc2626 |
-| `color-error-border` | エラー時の入力欄枠線 | `border-red-400` | #f87171 |
-| `color-error-bg` | エラー時の入力欄背景(薄) | `bg-red-50` | #fef2f2 |
+| `ink` | `text-ink` | #2A2521 | 本文・リスト項目名・しおりタイトル・暗色トーストの背景 |
+| `ink-strong` | `text-ink-strong` | #3B342E | アイコン(戻る・共有)、空状態の見出し、非選択タブ |
+| `ink-label` | `text-ink-label` | #5C534A | カード内の小見出しラベル(「準備状況」等) |
+| `ink-sub` | `text-ink-sub` | #6F665C | 件数・日程・補足テキスト |
+| `ink-muted` | `text-ink-muted` | #8C8378 | ヒント文・場所名・グループ内の件数 |
+| `ink-done` | `text-ink-done` | #A79E93 | 完了済み項目の取り消し線テキスト |
+| `ink-faint` | `text-ink-faint` | #BEB5A8 | 「済」バッジ、未チェックボックスの枠線、シェブロン |
 
-### 1-4. 期限強調(S3b TODO用)
+デザイン案にあった #4A423A は #3B342E と視認上ほぼ同一のため `ink-strong` に統合した(トークン数を抑えるための実装判断)。
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+### 1-4. エラー
+
+| トークン名 | Tailwindクラス例 | 値 | 用途 |
 |---|---|---|---|
-| `color-due-today-bg` | 期限当日の行の背景 | `bg-amber-50` | #fffbeb |
-| `color-due-today-border` | 期限当日の行の左枠線(強調バー) | `border-amber-400` | #fbbf24 |
-| `color-due-today-text` | 期限当日の日付文字 | `text-amber-700` | #b45309 |
+| `color-error` | `text-red-600` | #dc2626 | エラーメッセージの文字・アイコン |
+| `color-error-border` | `border-red-400` | #f87171 | エラー時の入力欄枠線 |
+| `color-error-bg` | `bg-red-50` | #fef2f2 | エラー時の入力欄背景(薄) |
 
-### 1-5. 広告枠プレースホルダー(F9)
+入力の重複警告など「エラーではないが注意を促す」文言は赤ではなく `sakura-ink` を使う。
 
-| トークン名 | 用途 | Tailwindクラス例 | 値(参考) |
+### 1-5. 期限強調(やることタブ用)
+
+| トークン名 | Tailwindクラス例 | 値 | 用途 |
 |---|---|---|---|
-| `color-ad-placeholder-bg` | 広告枠の背景 | `bg-neutral-100` | #f5f5f5 |
-| `color-ad-placeholder-border` | 広告枠の破線境界 | `border-neutral-300`(`border-dashed`) | #d4d4d4 |
-| `color-ad-placeholder-text` | 広告枠内の説明文字 | `text-neutral-400` | #a3a3a3 |
+| `color-due-today-bg` | `bg-amber-50` | #fffbeb | 期限当日の行の背景 |
+| `color-due-today-border` | `border-amber-400` | #fbbf24 | 期限当日の行の左枠線(強調バー) |
+| `color-due-today-text` | `text-amber-700` | #b45309 | 期限当日の日付文字 |
+
+### 1-5b. 広告枠プレースホルダー(F9)
+
+| トークン名 | Tailwindクラス例 | 値 | 用途 |
+|---|---|---|---|
+| `color-ad-placeholder-bg` | `bg-paper-surface` | #FFFDF8 | 広告枠の背景 |
+| `color-ad-placeholder-border` | `border-paper-dashed`(`border-dashed`) | #DCD5C8 | 広告枠の破線境界 |
+| `color-ad-placeholder-text` | `text-ink-muted` | #8C8378 | 広告枠内の説明文字 |
 
 ### 1-6. カバー(しおり)プリセット
 
@@ -106,21 +130,33 @@ Tailwindのデフォルトspacingスケール(4pxの倍数)をそのまま使う
 
 | トークン名 | Tailwind | px | 適用対象 |
 |---|---|---|---|
-| `radius-sm` | `rounded-md` | 6px | 小さいバッジ・カウンタ |
-| `radius-md` | `rounded-lg` | 8px | ボタン・入力欄 |
-| `radius-lg` | `rounded-xl` | 12px | カード・モーダル |
-| `radius-full` | `rounded-full` | 完全な円/ピル | チップ・スウォッチ・アイコンボタン |
+| `radius-sm` | `rounded-lg` | 8px | チェックボックス、小さいバッジ |
+| `radius-md` | `rounded-xl` | 12px | 入力欄、小ボタン、写真タイル |
+| `radius-btn` | `rounded-btn` | 14px | 主CTAボタン(独自追加。Tailwind既定に無い中間値) |
+| `radius-lg` | `rounded-2xl` | 16px | カード、リストカード、ボトムシート上端 |
+| `radius-full` | `rounded-full` | 完全な円/ピル | 進捗バー、追従ボタン、チップ |
 
 ## 4. タイポグラフィトークン
 
-| トークン名 | Tailwind | サイズ/行間 | 用途 |
+書体は **Zen Kaku Gothic New**(Google Fonts)。`src/app/layout.tsx` で `next/font` により自己ホストする。
+weightは400/500/700/900の4種を読み込む。
+
+`next/font` が持つこのファミリのサブセット一覧には `japanese` が無いため `subsets` は**指定しない**
+(指定すると日本語グリフが欠落しシステムフォントにフォールバックする)。あわせて `preload: false` とし、
+約110分割されたunicode-rangeチャンクの全先読みを避ける。
+
+| トークン名 | Tailwind | サイズ/太さ | 用途 |
 |---|---|---|---|
-| `text-heading-lg` | `text-xl font-bold` | 20px/28px | 画面タイトル(ヘッダー) |
-| `text-heading-md` | `text-lg font-bold` | 18px/28px | セクション見出し(タブ内見出し等) |
-| `text-body` | `text-base` | 16px/24px | 本文・入力値・リスト項目ラベル |
-| `text-body-sm` | `text-sm` | 14px/20px | 補足・日程・遠征タイプラベル |
-| `text-caption` | `text-xs` | 12px/16px | 注意書き・文字数カウンタ・広告枠表記 |
-| `text-button` | `text-base font-semibold` | 16px/24px | ボタン文言 |
+| `text-title` | `text-[22px]/[1.35] font-black` | 22px / 900 | しおりタイトル(ヘッダー通常時) |
+| `text-title-compact` | `text-[17px]/[1.35] font-black` | 17px / 900 | しおりタイトル(スクロール時) |
+| `text-heading` | `text-base font-black` | 16px / 900 | 日付グループ見出し(旅程・記録) |
+| `text-tab` | `text-[15px] font-bold` / `font-medium` | 15px | タブ(選択中は700、非選択は500) |
+| `text-body` | `text-base font-medium` | 16px / 500 | リスト項目名・入力値 |
+| `text-body-done` | `text-base font-normal line-through` | 16px / 400 | 完了済みのリスト項目名 |
+| `text-label` | `text-[13px] font-bold` | 13px / 700 | カード内の小見出し(「準備状況」等) |
+| `text-body-sm` | `text-[13px] font-medium` | 13px / 500 | 件数・日程・並べ替えボタン |
+| `text-caption` | `text-xs` | 12px / 400 | ヒント文・注意書き・文字数カウンタ |
+| `text-button` | `text-[15px] font-bold` | 15px / 700 | ボタン文言 |
 
 ## 5. コンポーネント共通仕様(タップ領域)
 

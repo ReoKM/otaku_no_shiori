@@ -1,3 +1,5 @@
+import { PlusIcon } from "@/components/list-ui/icons";
+
 /**
  * S3d Toolbar(ツールバー行)。
  * 参照: docs/design/screens/S3d_ログ.md「レイアウト」1./「Toolbar」/「写真削除(選択モード)」
@@ -40,22 +42,26 @@ export function LogToolbar({
   onCancelConfirm,
 }: LogToolbarProps) {
   return (
-    <div className="flex flex-col gap-2 pt-3 pb-2">
-      <div className="flex h-11 items-center justify-between px-4">
-        <p className="text-sm text-neutral-500">
+    <div className="flex flex-col gap-2 pt-5 pb-3">
+      <div className="flex min-h-11 items-center justify-between gap-2">
+        <p className="text-[13px] font-medium text-ink-sub">
           {count}/{max}枚
         </p>
         {selectMode ? (
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onCancelSelectMode} className="h-11 px-2 text-sm text-neutral-500">
-              キャンセル
+            <button
+              type="button"
+              onClick={onCancelSelectMode}
+              className="min-h-9 px-2 text-[13px] font-medium text-ink-sub"
+            >
+              選択をやめる
             </button>
             <button
               type="button"
               disabled={selectedCount === 0}
               onClick={onRequestDeleteConfirm}
-              className={`flex h-11 items-center justify-center rounded-lg px-4 text-base font-semibold ${
-                selectedCount === 0 ? "bg-neutral-200 text-neutral-400" : "bg-red-600 text-white"
+              className={`flex min-h-10 items-center justify-center rounded-full px-3.5 text-[13.5px] font-bold ${
+                selectedCount === 0 ? "bg-paper-track text-ink-faint" : "bg-red-600 text-white"
               }`}
             >
               削除({selectedCount})
@@ -64,32 +70,47 @@ export function LogToolbar({
         ) : (
           <div className="flex items-center gap-2">
             {count > 0 && (
-              <button type="button" onClick={onEnterSelectMode} className="h-11 px-2 text-sm text-neutral-500">
-                削除
+              <button
+                type="button"
+                onClick={onEnterSelectMode}
+                className="min-h-9 px-2 text-[13px] font-medium text-ink-strong"
+              >
+                選択
               </button>
             )}
             <button
               type="button"
               onClick={onAddPhoto}
               disabled={addDisabled}
-              className={`flex h-11 items-center justify-center rounded-lg px-4 text-base font-semibold ${
-                addDisabled ? "bg-neutral-200 text-neutral-400" : "bg-pink-500 text-white"
+              className={`flex min-h-10 items-center justify-center gap-1.5 rounded-full border px-3.5 text-[13.5px] font-bold ${
+                addDisabled
+                  ? "border-paper-dashed bg-paper-track text-ink-faint"
+                  : "border-sakura-border bg-white text-sakura-ink"
               }`}
             >
+              <PlusIcon size={16} />
               写真を追加
             </button>
           </div>
         )}
       </div>
       {confirming && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4">
-          <p className="text-sm text-neutral-700">選択した{selectedCount}枚を削除しますか？</p>
-          <div className="flex gap-2">
-            <button type="button" onClick={onConfirmDelete} className="h-11 px-2 text-sm font-semibold text-red-600">
-              削除する
-            </button>
-            <button type="button" onClick={onCancelConfirm} className="h-11 px-2 text-sm text-neutral-500">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-paper-border bg-paper-surface px-3.5 py-2">
+          <p className="text-[13px] text-ink">選択した{selectedCount}枚を削除します。よろしいですか?</p>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={onCancelConfirm}
+              className="min-h-11 px-3 text-[13px] font-medium text-ink-label"
+            >
               キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={onConfirmDelete}
+              className="min-h-11 px-3 text-[13px] font-bold text-red-600"
+            >
+              削除する
             </button>
           </div>
         </div>

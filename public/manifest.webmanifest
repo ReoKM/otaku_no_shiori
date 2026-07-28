@@ -1,12 +1,12 @@
 {
   "name": "オタクのしおり",
   "short_name": "オタクのしおり",
-  "description": "遠征(ライブ・イベント・聖地巡礼)の持ち物・TODO・旅程を1冊のしおりにまとめられる遠征準備ツール",
+  "description": "遠征(ライブ・イベント・聖地巡礼)の持ち物・やること・旅程を1冊のしおりにまとめられる遠征準備ツール",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#f6339a",
+  "background_color": "#FDFBF7",
+  "theme_color": "#D6146F",
   "lang": "ja",
   "icons": [
     {

@@ -4,9 +4,13 @@
  */
 export function EmptySpots() {
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-      <p className="text-base text-neutral-500">まだ行きたい場所がありません</p>
-      <p className="text-sm text-neutral-500">上のボタンから追加しましょう</p>
+    <div className="rounded-2xl border border-dashed border-paper-dashed bg-paper-surface px-5.5 pt-9 pb-7 text-center">
+      <p className="text-base font-bold text-ink-strong">行きたい場所はまだありません</p>
+      <p className="mt-2 text-[13px]/[1.7] text-ink-sub">
+        聖地やカフェなど、
+        <br />
+        遠征中に寄りたい場所を登録しましょう
+      </p>
     </div>
   );
 }
