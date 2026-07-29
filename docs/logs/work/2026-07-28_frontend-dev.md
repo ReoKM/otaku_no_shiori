@@ -44,3 +44,14 @@
   - `/shiori/[id]/share`への直アクセスは404ではなく記録タブへのリダイレクトにした(仮置き。共有機能は将来復活するため、URLを「無い」扱いにしないほうが安全という判断)
   - PR #85(予算セグメント)がまだ未マージのため、本ブランチは`main`ではなく`claude/budget-feature-demo-v2`を起点にしている。#85のマージ後に本PRのbaseを`main`へ切り替える必要がある
 - 成果物: 本PR。主要ファイル: `src/lib/feature-flags.ts`、`src/components/itinerary/AddSpotBar.tsx`、`src/components/shiori-detail/TabBar.tsx`、`src/components/todo/TodoSegmentedControl.tsx`、`src/app/shiori/[id]/layout.tsx`、`src/app/shiori/[id]/share/page.tsx`、`src/components/log/LogTab.tsx`、`src/components/shiori-form/FieldDateRange.tsx`、`src/components/shiori-form/ShioriCreateForm.tsx`、`docs/design/screens/*`
+
+## 追記 「費用」セグメント内の文言についてのオーナー決定
+- Goal: PR #86「判断をお願いしたい点1」(費用タブ内の文言を「予算」のままにするか「費用」に統一するか)を確定し、実装・記録に反映する
+- 結果: 達成
+- やったこと:
+  - オーナー回答「aでいきましょう」= (a) このまま(タブ名=費用、セクション内の文言=予算総額)を採用
+  - 現行実装がすでに(a)のためコード上の文言変更は不要。将来「不整合」として直されないよう、`src/components/todo/TodoSegmentedControl.tsx`のコメントにオーナー決定として明記した
+  - PR #86 本文の「判断をお願いしたい点1」「できていないこと」を決定済みに更新
+- できていないこと: なし
+- 不明点・仮置き: なし(オーナー決定により解消)
+- 成果物: PR #86、`src/components/todo/TodoSegmentedControl.tsx`
