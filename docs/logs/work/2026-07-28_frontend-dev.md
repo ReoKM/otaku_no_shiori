@@ -20,3 +20,52 @@
   - F番号は未採番。`docs/01_service_spec.md`は今回更新していない(オーナー承認後にPM経由で追記予定)
   - タスク指示は`BudgetItem`に`memo`フィールドを持たせる想定だったが、S3b2仕様の`BudgetMemoCard`は費目ごとではなく予算セクション全体で1本のメモを持つ構成のため、`BudgetItem.memo`は実装せず`Shiori.budget_memo`(新規追加)に持たせた。仕様(source of truth)を優先した判断として完了報告・PR本文にも明記した
 - 成果物: PR #83 (https://github.com/ReoKM/otaku_no_shiori/pull/83)。主要ファイル: `src/types/shiori.ts`、`src/lib/guest-store.ts`、`src/lib/budget-validation.ts`、`src/components/budget/*`、`src/components/todo/TodoTab.tsx`・`TodoSection.tsx`・`TodoSegmentedControl.tsx`
+
+## 22:40 タブ名変更・共有機能の一時クローズ・作成画面のコンパクト化(PR #85の続き)
+- Goal: オーナー指示4件(いきたい場所の追加導線を1本化 / タブ名「やること」→「準備」・サブタブ「予算」→「費用」 / 共有機能を一時的に閉じる / しおり作成の日程欄を横並びにして画面をコンパクトに)が反映され、CIが通る状態になる
+- 結果: 達成
+- やったこと:
+  - `src/lib/feature-flags.ts`(新規): 一時的に閉じる導線のスイッチを1ファイルに集約。`FEATURE_SPOT_SEED_SEARCH`(おすすめから探す)・`FEATURE_SHARE`(共有機能)をどちらも`false`で追加。値を`true`に戻すだけで元の導線が復活する形にし、実装コードは一切削除していない(オーナー指示)
+  - `src/components/itinerary/AddSpotBar.tsx`: 「行きたい場所」の追加導線を「追加する」(`sakura`背景の主ボタン・全幅)1本に変更。「おすすめから探す」は`FEATURE_SPOT_SEED_SEARCH`で非表示にしただけで、S4スポット検索画面(`/shiori/[id]/spots/search`)・シードデータ・`onFindSeed`ハンドラはそのまま残した
+  - `src/components/shiori-detail/TabBar.tsx`: タブ名「やること」→「準備」。URLパス`/todo`は据え置き(既存リンク・SWキャッシュルーティングを壊さないため)
+  - `src/components/todo/TodoSegmentedControl.tsx`: サブタブ名「予算」→「費用」。セグメントidは`budget`のまま(型・データと揃えるため表示名のみ変更)
+  - 共有機能(S5)を一時クローズ: `src/app/shiori/[id]/layout.tsx`(ヘッダーの共有アイコン)・`src/components/log/LogTab.tsx`(記録タブ下部の`LogShareCard`)を`FEATURE_SHARE`で非表示に。加えて`src/app/shiori/[id]/share/page.tsx`で直リンク・履歴からの到達時に記録タブへ`router.replace`するようにした(導線を隠すだけでは到達できてしまうため)。`src/components/share/`・`netlify/functions/share-image.mts`・`src/templates/share-image/`は無変更
+  - `src/components/shiori-form/FieldDateRange.tsx`: `flex-col ... sm:flex-row`→常に横並び(`flex-row`)。375px幅で2列に収まるよう入力欄を`min-h-12`→`min-h-11`、`px-3.5`→`px-2.5`、`text-base`→`text-[15px]`に詰めた
+  - `src/components/shiori-form/ShioriCreateForm.tsx`: 項目間の余白`gap-6`→`gap-5`、上下`pt-5 pb-8`→`pt-4 pb-7`にして画面をわずかにコンパクト化
+  - docs更新: `S3_しおり詳細.md`(タブラベル3箇所)、`S2_しおり作成.md`(日程は常に横並び)、`S3c_旅程スポット.md`(AddSpotBar・文言一覧)、`S3d_ログ.md`・`S5_共有画像プレビュー.md`(共有機能の一時クローズとフラグの場所)
+  - `npm run lint` / `npx tsc --noEmit` / `npm test`(33ファイル355件)・`npm run build`が全て成功することを確認
+  - Playwright(Chromium、375px幅・DPR2)で実ブラウザ確認: しおり作成画面で開始日・終了日が横並びに収まること、タブが「持ち物/準備/旅程/記録」・サブタブが「やること/費用」になっていること、ヘッダーに共有アイコンが出ないこと、「行きたい場所」の追加ボタンが「追加する」1つになっていること、`/shiori/[id]/share`が`/shiori/[id]/log`へリダイレクトされることを確認
+- できていないこと:
+  - 「費用」セグメント内の文言(「予算総額」「予算はまだ決めていません」「予算総額を決める」「予算をクリアする」)は**「予算」のまま**にした。オーナー指示はサブタブ名のみだったため。タブ名と本文の語をどちらに揃えるかはオーナー判断が必要(PR本文に記載)
+  - `docs/01_service_spec.md`のF7(共有画像生成)は未更新。仕様からの削除ではなくリリース範囲の判断のため、PM経由でオーナー承認を得てから反映する(CLAUDE.md「仕様と実装がズレたら勝手にどちらかへ合わせない」)
+  - 実機iOS Safariでの確認は未実施(`<input type="date">`の表示幅が実機で変わる可能性がある)
+- 不明点・仮置き:
+  - 「追加する」ボタンの色は、`FEATURE_SPOT_SEED_SEARCH`が閉じているあいだは主ボタン(`sakura`背景)にした。2ボタン構成に戻したときは元どおり白地+`sakura-border`枠の副ボタンに戻る
+  - `/shiori/[id]/share`への直アクセスは404ではなく記録タブへのリダイレクトにした(仮置き。共有機能は将来復活するため、URLを「無い」扱いにしないほうが安全という判断)
+  - PR #85(予算セグメント)がまだ未マージのため、本ブランチは`main`ではなく`claude/budget-feature-demo-v2`を起点にしている。#85のマージ後に本PRのbaseを`main`へ切り替える必要がある
+- 成果物: 本PR。主要ファイル: `src/lib/feature-flags.ts`、`src/components/itinerary/AddSpotBar.tsx`、`src/components/shiori-detail/TabBar.tsx`、`src/components/todo/TodoSegmentedControl.tsx`、`src/app/shiori/[id]/layout.tsx`、`src/app/shiori/[id]/share/page.tsx`、`src/components/log/LogTab.tsx`、`src/components/shiori-form/FieldDateRange.tsx`、`src/components/shiori-form/ShioriCreateForm.tsx`、`docs/design/screens/*`
+
+## 追記 「費用」セグメント内の文言についてのオーナー決定
+- Goal: PR #86「判断をお願いしたい点1」(費用タブ内の文言を「予算」のままにするか「費用」に統一するか)を確定し、実装・記録に反映する
+- 結果: 達成
+- やったこと:
+  - オーナー回答「aでいきましょう」= (a) このまま(タブ名=費用、セクション内の文言=予算総額)を採用
+  - 現行実装がすでに(a)のためコード上の文言変更は不要。将来「不整合」として直されないよう、`src/components/todo/TodoSegmentedControl.tsx`のコメントにオーナー決定として明記した
+  - PR #86 本文の「判断をお願いしたい点1」「できていないこと」を決定済みに更新
+- できていないこと: なし
+- 不明点・仮置き: なし(オーナー決定により解消)
+- 成果物: PR #86、`src/components/todo/TodoSegmentedControl.tsx`
+
+## 追記 F7(共有画像生成)のPhase 2送りを仕様・ロードマップに反映
+- Goal: PR #86の残っていた判断点(F7をPhase 2送りとして`docs/`に反映してよいか)をオーナー承認どおり反映し、仕様と実装のズレを解消する
+- 結果: 達成
+- やったこと:
+  - オーナー回答「phase2に送る」を受け、`docs/01_service_spec.md`・`docs/02_roadmap.md`を更新(ロードマップ変更はオーナー承認が必要な事項。承認済み)
+  - `01_service_spec.md`: F7見出しに「ファーストリリースには入れない → Phase 2」を明記し、実装は完了済みで`FEATURE_SHARE`で導線のみ閉じている旨と復活手順を注記。F8のログイン促しタイミング(ファーストリリースは1箇所のみ)、画面一覧S5、画面遷移図(S5への線を破線+「Phase 2」表記)、フロー2(ファーストリリースは1のみ)、「MVPでやらないこと」にF7・S5を追加
+  - `02_roadmap.md`: W2マイルストーンからF7を外し「W2: 遠征体験」に改名。Phase 1 KPIから「共有画像生成数30枚」「共有画像経由の流入」を削除し、代わりに完成率の計測を置いた。Phase 2施策の先頭に「共有画像生成(F7)の開放」を追加(フラグを`true`に戻すだけで復活する旨と移動したKPIを記載)、既存施策を1〜3→2〜4に採番し直し、Phase 2 KPIに移動分の2項目を追加
+  - `npm run lint` / `npx tsc --noEmit` / `npm test`(355件)が通ることを確認(docsのみの変更)
+- できていないこと:
+  - 北極星の「完了」の代理指標を「共有画像生成あり」とするかは未確定のまま(F7がPhase 2送りになったため要再検討。`docs/design/notes/2026-07-28_予算機能の検討.md`判断事項3として残っている旨をロードマップに注記した)
+- 不明点・仮置き:
+  - Phase 1 KPIから共有画像の2項目を抜いた穴埋めとして「完成率(旅程または持ち物が1件以上入った割合)の計測」を置いた。KPI定義の追加に当たるため、不要ならPMで差し替える
+- 成果物: PR #86、`docs/01_service_spec.md`、`docs/02_roadmap.md`
