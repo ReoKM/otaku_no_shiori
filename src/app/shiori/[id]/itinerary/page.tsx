@@ -1,29 +1,27 @@
-import { ItineraryTab } from "@/components/itinerary/ItineraryTab";
-import type { ItinerarySegment } from "@/components/itinerary/SegmentedControl";
+import { Suspense } from "react";
+import { ItineraryRoute } from "@/components/itinerary/ItineraryRoute";
+import { ItinerarySkeleton } from "@/components/itinerary/ItinerarySkeleton";
 
 /**
  * S3c 旅程タブ。
  * 参照: docs/design/screens/S3c_旅程スポット.md
  *
- * S4(`/shiori/[id]/spots/search`)の「戻る」ボタン・`EmptySearchResult`の
- * 「しおりに戻って自由に追加する」リンクは、`section=spots`(・`openFreeForm=1`)を
- * クエリパラメータに付けてこのページへ遷移してくる(S4仕様「タップ時の挙動」参照)。
- * Server Componentでsearchparamsを読み、`ItineraryTab`の初期表示に反映する
- * (`useSearchParams`によるクライアント側Suspense境界を避けるため、propsで渡す設計)。
+ * このファイルはServer Componentのまま保つ(`"use client"`を付けない)。
+ * Client Componentのページファイルは`export const dynamic`を持てず、
+ * ルートが動的扱い(リクエストごとにNetlify Functions起動)になるため。
+ *
+ * クエリパラメータ(`section`/`openFreeForm`)はページ側のsearchParamsで読むと
+ * ルートが動的になるため、`ItineraryRoute`(Client Component)の`useSearchParams`で読む。
+ * `useSearchParams`はSuspense境界を要求するのでここで包む。
  */
-export default async function ItineraryPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ section?: string; openFreeForm?: string }>;
-}) {
+export default async function ItineraryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const sp = await searchParams;
-  const initialSection: ItinerarySegment = sp.section === "spots" ? "spots" : "itinerary";
-  const initialOpenFreeForm = sp.openFreeForm === "1";
 
   return (
-    <ItineraryTab shioriId={id} initialSection={initialSection} initialOpenFreeForm={initialOpenFreeForm} />
+    <Suspense fallback={<ItinerarySkeleton />}>
+      <ItineraryRoute shioriId={id} />
+    </Suspense>
   );
 }
+
+export const dynamic = "force-static";

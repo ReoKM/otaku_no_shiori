@@ -1,25 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Zen_Kaku_Gothic_New } from "next/font/google";
 import Script from "next/script";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import "./globals.css";
 
-// 紙テイストUIの本文フォント。参照: docs/design/tokens.md「4. タイポグラフィトークン」
+// 本文フォントはWebフォントを使わず端末のシステムフォントに任せる
+// (2026-08-07オーナー判断。フォントスタックは globals.css の `--font-sans`)。
 //
-// `subsets`はあえて指定しない。next/fontが持つこのファミリのサブセット一覧は
-// cyrillic/latin/latin-extのみで`japanese`が無く、指定すると日本語グリフが
-// 一切含まれずシステムフォントにフォールバックしてしまうため。
-// 未指定にするとGoogle Fontsが全unicode-range(日本語約110分割を含む)を返し、
-// next/fontがそれらを自己ホストする。
+// 以前は next/font で Zen Kaku Gothic New を読み込んでいたが、日本語は
+// Google Fonts が unicode-range を121分割で返すため、4ウェイト分で
+// @font-face 485個・woff2 484ファイル(5.4MB)が生成されていた。
+// 結果、描画をブロックするCSSが gzip 128KB、トップ画面の実文字列だけで
+// フォント84リクエスト/750KBを要求し、初回表示が重い直接原因になっていた。
+// 日本語は文字が unicode-range 全域に散るため `preload: false` では回避できない。
 //
-// あわせて`preload: false`にする。全チャンクを先読みすると初回表示が大きく重くなるため、
-// ブラウザに実際に必要な範囲だけ取得させる(無料枠ガードレールの観点でも先読みは避ける)。
-const zenKaku = Zen_Kaku_Gothic_New({
-  variable: "--font-zen-kaku",
-  weight: ["400", "500", "700", "900"],
-  display: "swap",
-  preload: false,
-});
+// Webフォントを再導入する場合は、この分割の問題を必ず先に解決すること
+// (見出し限定・単一ウェイト、またはサブセット済みフォントの self-host)。
 
 export const metadata: Metadata = {
   title: "オタクのしおり | 遠征のすべてを、1冊のしおりに。",
@@ -48,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${zenKaku.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
         {children}

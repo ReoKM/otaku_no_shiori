@@ -7,7 +7,7 @@
  * 単体テストは sw-routing.test.ts にあり、この関数を正としてロジックを担保する。
  */
 
-export type SwFetchStrategy = "passthrough" | "cache-first" | "network-first-page";
+export type SwFetchStrategy = "passthrough" | "cache-first" | "stale-while-revalidate-page";
 
 export interface SwFetchInput {
   /** HTTPメソッド(Request.method)。 */
@@ -23,8 +23,13 @@ export interface SwFetchInput {
 /**
  * fetchイベントの処理方針を決める。
  * - 非GET・クロスオリジンはSWで扱わずブラウザに素通しする(passthrough)
- * - ページナビゲーションは network-first(オフライン時のみキャッシュへフォールバック。
- *   Issue #61「オフライン時に白画面」の解消)
+ * - ページナビゲーションは stale-while-revalidate(キャッシュがあれば即返し、裏で更新。
+ *   オフライン時はキャッシュ→アプリシェル「/」の順でフォールバック。
+ *   Issue #61「オフライン時に白画面」の解消はキャッシュ側で維持される)
+ *
+ *   network-firstから変更した(2026-08-07)。しおりのデータはIndexedDBにあり、
+ *   HTMLは中身を持たないアプリシェルでしかないため、2回目以降の訪問で
+ *   毎回ネットワーク往復を待つ必要がない。待ち時間がそのまま体感の重さになっていた。
  * - `/_next/static/` はコンテンツハッシュ付きの不変アセットのため cache-first
  * - それ以外の同一オリジンGET(API等)は素通し(プリキャッシュ済みのmanifest/iconは
  *   sw.js側でキャッシュ照合されるためここでは分類しない)
@@ -37,7 +42,7 @@ export function decideFetchStrategy(input: SwFetchInput): SwFetchStrategy {
     return "passthrough";
   }
   if (input.mode === "navigate") {
-    return "network-first-page";
+    return "stale-while-revalidate-page";
   }
   if (input.pathname.startsWith("/_next/static/")) {
     return "cache-first";
