@@ -5,8 +5,8 @@
  * キャッシュすればオフラインでも持ち物・TODO・旅程の閲覧が動く(Issue #61対応)。
  *
  * 戦略:
- * - ページナビゲーション: network-first(成功したらキャッシュ更新、失敗=オフライン時は
- *   キャッシュ済みの同一URL→「/」の順でフォールバック)
+ * - ページナビゲーション: stale-while-revalidate(キャッシュがあれば即返し、裏で更新。
+ *   キャッシュが無ければネットワーク待ち。オフラインかつ未キャッシュなら「/」へフォールバック)
  * - /_next/static/: cache-first(コンテンツハッシュ付きの不変アセット)
  * - 非GET・クロスオリジン・その他: 素通し
  *
@@ -15,7 +15,9 @@
  * 単体テストは src/lib/sw-routing.test.ts にある。
  */
 
-const CACHE_VERSION = "v1";
+// 戦略変更(network-first → stale-while-revalidate)とWebフォント廃止でアセットが
+// 入れ替わるため、旧キャッシュを確実に破棄するようv2へ上げる(activateで削除される)。
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `otaku-no-shiori-${CACHE_VERSION}`;
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon.svg"];
 
@@ -28,7 +30,7 @@ function decideFetchStrategy(input) {
     return "passthrough";
   }
   if (input.mode === "navigate") {
-    return "network-first-page";
+    return "stale-while-revalidate-page";
   }
   if (input.pathname.startsWith("/_next/static/")) {
     return "cache-first";
@@ -67,27 +69,39 @@ async function updateCache(request, response) {
   }
 }
 
-async function networkFirstPage(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      await updateCache(request, response);
-    }
-    return response;
-  } catch {
-    // オフライン時: 同一URLのキャッシュ→アプリシェル「/」の順でフォールバックする。
-    // ルーティングはクライアント側(Next.js)が行うため、「/」が返ればIndexedDBの
-    // データで各タブの表示が成立する。
-    const cached = await caches.match(request);
-    if (cached) {
-      return cached;
-    }
-    const shell = await caches.match("/");
-    if (shell) {
-      return shell;
-    }
-    return Response.error();
+async function staleWhileRevalidatePage(request) {
+  const cached = await caches.match(request);
+
+  // 裏で最新版を取りに行きキャッシュを更新する。次回の遷移から新しい内容が使われる。
+  const fetching = fetch(request)
+    .then((response) => {
+      if (response.ok) {
+        // updateCache は response.clone() を使うため、ここで返す response は消費されない。
+        return updateCache(request, response).then(() => response);
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    // キャッシュがあれば待たずに即返す(ネットワーク往復を体感から消す)。
+    return cached;
   }
+
+  // 初回訪問など未キャッシュのときだけネットワークを待つ。
+  const response = await fetching;
+  if (response) {
+    return response;
+  }
+
+  // オフラインかつ未キャッシュ: アプリシェル「/」へフォールバックする。
+  // ルーティングはクライアント側(Next.js)が行うため、「/」が返ればIndexedDBの
+  // データで各タブの表示が成立する(Issue #61「オフライン時に白画面」の解消)。
+  const shell = await caches.match("/");
+  if (shell) {
+    return shell;
+  }
+  return Response.error();
 }
 
 async function cacheFirst(request) {
@@ -112,8 +126,8 @@ self.addEventListener("fetch", (event) => {
     pathname: url.pathname,
   });
 
-  if (strategy === "network-first-page") {
-    event.respondWith(networkFirstPage(request));
+  if (strategy === "stale-while-revalidate-page") {
+    event.respondWith(staleWhileRevalidatePage(request));
     return;
   }
   if (strategy === "cache-first") {

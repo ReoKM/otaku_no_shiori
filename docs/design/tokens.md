@@ -138,12 +138,31 @@ Tailwindのデフォルトspacingスケール(4pxの倍数)をそのまま使う
 
 ## 4. タイポグラフィトークン
 
-書体は **Zen Kaku Gothic New**(Google Fonts)。`src/app/layout.tsx` で `next/font` により自己ホストする。
-weightは400/500/700/900の4種を読み込む。
+書体は**端末のシステムフォント**を使う。Webフォントは読み込まない(2026-08-07オーナー判断)。
+フォントスタックは `src/app/globals.css` の `--font-sans` で定義する:
 
-`next/font` が持つこのファミリのサブセット一覧には `japanese` が無いため `subsets` は**指定しない**
-(指定すると日本語グリフが欠落しシステムフォントにフォールバックする)。あわせて `preload: false` とし、
-約110分割されたunicode-rangeチャンクの全先読みを避ける。
+```
+system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+"Yu Gothic UI", "Meiryo", sans-serif
+```
+
+iOS/macOSはヒラギノ角ゴ ProN、AndroidはNoto Sans JP、WindowsはYu Gothic UIが当たる。
+端末により字面が変わることは許容する。
+
+**Webフォントを再導入しない理由(2026-08-07の計測)**:
+以前は `next/font` で Zen Kaku Gothic New(weight 400/500/700/900)を自己ホストしていたが、
+日本語はGoogle Fontsが unicode-range を121分割で返すため、4ウェイト分で
+@font-face 485個・woff2 484ファイル(5.4MB)が生成されていた。結果:
+
+| 指標 | Webフォント時 | システムフォント |
+|---|---|---|
+| 描画ブロッキングCSS(gzip) | 128 KB | 6.4 KB |
+| トップ画面のフォント転送 | 750 KB / 84リクエスト | 0 |
+| 初回転送 合計 | 約1.1 MB / 95リクエスト超 | 約200 KB / 約12リクエスト |
+
+日本語は文字がunicode-range全域に散るため `preload: false` では回避できない。
+再導入する場合は、見出し限定の単一ウェイトかサブセット済みフォントのself-hostなど、
+この分割の問題を先に解決すること。
 
 | トークン名 | Tailwind | サイズ/太さ | 用途 |
 |---|---|---|---|

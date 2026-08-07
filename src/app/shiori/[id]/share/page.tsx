@@ -1,32 +1,17 @@
-"use client";
-
-import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ShareTab } from "@/components/share/ShareTab";
-import { FEATURE_SHARE } from "@/lib/feature-flags";
+import { ShareRoute } from "@/components/share/ShareRoute";
 
 /**
  * S5 共有画像プレビュー画面。
  * 参照: docs/design/screens/S5_共有画像プレビュー.md
  *
- * 共有機能はファーストリリースでは閉じている(src/lib/feature-flags.ts)。
- * 導線を隠すだけでは直リンク・履歴から到達できてしまうため、この画面でも記録タブへ戻す。
- * `FEATURE_SHARE`を`true`に戻せば元どおり表示される。
+ * このファイルはServer Componentのまま保つ(`"use client"`を付けない)。
+ * Client Componentのページファイルは`export const dynamic`を持てず、
+ * ルートが動的扱い(リクエストごとにNetlify Functions起動)になるため。
+ * フィーチャーフラグによる差し戻しは`ShareRoute`(Client Component)側で行う。
  */
-export default function SharePage() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const shioriId = params.id;
-
-  useEffect(() => {
-    if (!FEATURE_SHARE) {
-      router.replace(`/shiori/${shioriId}/log`);
-    }
-  }, [router, shioriId]);
-
-  if (!FEATURE_SHARE) {
-    return null;
-  }
-
-  return <ShareTab shioriId={shioriId} />;
+export default async function SharePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <ShareRoute shioriId={id} />;
 }
+
+export const dynamic = "force-static";

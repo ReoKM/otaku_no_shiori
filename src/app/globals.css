@@ -40,10 +40,13 @@
   /* 角丸(Tailwind既定に無い中間値のみ追加) */
   --radius-btn: 14px;
 
-  /* フォント */
+  /* フォント
+     Webフォントは読み込まず端末のシステムフォントを使う(理由は src/app/layout.tsx 冒頭)。
+     日本語の角ゴシックが当たる順に並べる:
+     iOS/macOS → ヒラギノ角ゴ ProN / Android → Noto Sans JP / Windows → Yu Gothic UI */
   --font-sans:
-    var(--font-zen-kaku), system-ui, -apple-system, "Hiragino Kaku Gothic ProN",
-    "Noto Sans JP", sans-serif;
+    system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    "Yu Gothic UI", "Meiryo", sans-serif;
 }
 
 /* 行追加直後のハイライト(1.2秒でフェード) */

@@ -20,9 +20,9 @@ describe("decideFetchStrategy", () => {
     expect(decideFetchStrategy(input({ sameOrigin: false, mode: "navigate" }))).toBe("passthrough");
   });
 
-  it("ページナビゲーションはnetwork-first", () => {
+  it("ページナビゲーションはstale-while-revalidate", () => {
     expect(decideFetchStrategy(input({ mode: "navigate", pathname: "/shiori/abc/packing" }))).toBe(
-      "network-first-page",
+      "stale-while-revalidate-page",
     );
   });
 
