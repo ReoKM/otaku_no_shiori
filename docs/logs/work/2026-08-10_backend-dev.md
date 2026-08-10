@@ -150,4 +150,62 @@
   - `src/lib/guest-migration.ts`(IDOR対策の所有権確認・フィルタリングを追加)
   - `src/lib/guest-migration.test.ts`(IDORシナリオのテスト追加)
   - `src/app/api/migration/guest/route.ts`(JSDocのレスポンス例更新)
+
+## 16:10 OAuthコールバックルート(/auth/callback)の実装
+
+- Goal: OAuthコールバックルート(`/auth/callback`)を実装し、X/GoogleのOAuthログインが完了できる状態にする
+- 結果: 達成(実プロバイダでの実ログイン確認を除く。理由は「できていないこと」参照)
+- やったこと:
+  - `origin/main`(PR #89・#103マージ済み)から `feature/issue-94-oauth-callback` ブランチを作成
+  - `src/lib/supabase/auth-callback.ts`: 判定ロジックを切り出し
+    - `isSafeRedirectPath` / `resolveRedirectPath`: `next`クエリパラメータの安全性判定。絶対URL・`//`始まり・スキーム混入・512文字超はホーム(`/`)にフォールバック(オープンリダイレクト対策)
+    - `buildRedirectUrl` / `buildAuthErrorRedirectUrl`: 成功時・失敗時のリダイレクトURL組み立て。失敗時は`authError=<理由コード>`(`missing_code` / `provider_denied` / `exchange_failed`)のみ付与し、プロバイダの生エラー文言はURLに含めない
+    - `exchangeAuthCode`: `supabase.auth.exchangeCodeForSession(code)` のラッパー。例外を投げず結果オブジェクトを返す(`health.ts`と同じ方針)
+  - `src/app/auth/callback/route.ts`: `GET /auth/callback`。`code`必須チェック→`error`(プロバイダ側拒否)チェック→コード交換→成功/失敗でリダイレクト。`dynamic = "force-dynamic"`
+  - テスト16件追加:
+    - `src/lib/supabase/auth-callback.test.ts`(13件): 安全なリダイレクト先判定・URL組み立て・コード交換の結果整形(成功/Supabaseエラー/例外)
+    - `src/app/auth/callback/route.test.ts`(7件): `createSupabaseServerClient`をモックしたルート結線テスト(code欠如・provider拒否・交換成功/失敗/例外・next指定・next不正時のフォールバック)
+  - `supabase/README.md` 更新: オーナー作業に「Authentication → URL Configuration へ `/auth/callback` を登録する」手順を追加、「まだ実装していないもの」からコールバックを外し実装済みセクションを新設
+  - `npm run lint && npm run typecheck && npm test` すべて成功(テスト397件全通過。今回追加16件)
+- できていないこと:
+  - **実プロバイダ(X/Google)での実際のログイン成功確認**。ブラウザでの対話的なOAuth同意操作と実プロバイダの認証情報が要るため、この自動化コーディングエージェントの作業環境では実施できない。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する
+  - セッション更新middleware(トークン自動リフレッシュ)。Issue #94の依頼内容に含まれないため対象外とし、`supabase/README.md`の未実装リストに残した
+  - ログインボタン等のUI実装(Issue #95・frontend-dev担当)
+  - ゲストデータ移行APIとの結線(Issue #99等)
+- 不明点・仮置き:
+  - Issue #94本文には当初「実プロバイダE2E確認はタスク#2(オーナー作業)完了後」という留保があったが、Issueコメント(オーナー)で「Issue #91がクローズ済みのため留保解除。実プロバイダでのログイン成功確認を完了条件に含めてよい」と追記されていた。一方、本タスクの指示元(呼び出し元エージェント)からは「実プロバイダでの実ログイン確認はこの作業環境では実施できない(ブラウザ対話操作が必要なため自動化エージェントの作業範囲外)」と明示されていた。ブラウザ対話・実認証情報が無いという環境制約は指示の変更によって解消するものではないため、指示元の指示どおり「コード実装+モックテストまで」をスコープとして進めた。Issueコメントの期待とのギャップがあるため、PM/オーナーに確認してほしい
+  - 成功時のリダイレクト先をS1(ホーム`/`)に仮置きした。S6(設定/アカウント画面)が未実装のため。`next`クエリパラメータで上書き可能にし、将来のログインボタン実装(Issue #95)から遷移元を指定できるようにしてある
+  - 失敗時のリダイレクト形式(`?authError=<理由コード>`)を仮置きした。仕様書に具体的なエラーUI仕様が無いため、フロント側が拾いやすい最小限の固定コードにした(プロバイダの生メッセージは含めない)
+- 成果物:
+  - PR: (このセッションで作成。PR番号は完了報告参照)
+  - `src/lib/supabase/auth-callback.ts` / `auth-callback.test.ts`
+  - `src/app/auth/callback/route.ts` / `route.test.ts`
+  - `supabase/README.md`
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
+
+## 18:20 PR #107 code-reviewer指摘の修正(isSafeRedirectPathのバックスラッシュ経由オープンリダイレクト)
+
+- Goal: PR #107（`feature/issue-94-oauth-callback`）の `isSafeRedirectPath` にあるバックスラッシュ経由のオープンリダイレクト脆弱性を、`new URL(path, origin).origin` 比較方式で根本修正し、テストを追加した上で既存PRに追加コミット・pushする
+- 結果: 達成
+- やったこと:
+  - 共有の作業ディレクトリで別セッションがブランチを切り替えていたため、`git worktree add` で `feature/issue-94-oauth-callback` 専用のworktreeを作り、そちらで作業した(既存セッションの作業を壊さないため)
+  - `src/lib/supabase/auth-callback.ts` の `isSafeRedirectPath` を修正
+    - 旧実装: `startsWith("/")` → `startsWith("//")` → `includes("://")` の個別パターンを後追いでブロックする方式。`next=/\evil.example` はこの3チェックすべてを回避したうえで、`new URL(path, origin)`(`buildRedirectUrl`/`buildAuthErrorRedirectUrl`内)がWHATWG URL仕様の特別スキームの挙動(バックスラッシュ→スラッシュ正規化)により `https://evil.example/` に解決されてしまう脆弱性があった
+    - 新実装: `isSafeRedirectPath(path, origin)` に変更。実際のリダイレクトと同じ `new URL(path, origin)` を判定側でも解決し、結果の `origin` が期待する自サイトの `origin` と一致するかで判定する方式にした。個別パターンの後追いではなく、`new URL`が外部originへ解決する経路を一括して閉じる
+    - `resolveRedirectPath` にも `origin` 引数を追加し、呼び出し元(`src/app/auth/callback/route.ts`)から `url.origin` を渡すよう変更
+  - テスト追加・修正(`src/lib/supabase/auth-callback.test.ts`)
+    - バックスラッシュ経由3パターン(`/\evil.example` 等)を拒否することを確認するテストを追加
+    - `resolveRedirectPath` のバックスラッシュ経由フォールバックのテストを追加
+    - 旧実装で「スキームを含む値は拒否する」としていたテスト(`/redirect?to=javascript://evil`)を見直した。この値は同一origin内のパスであり、`new URL`解決後もoriginが変わらない(=実際には開いても自サイトから離れない)ため、origin比較方式では許可が正しい挙動。誤検知が起きないことを確認するテストに書き換えた
+  - `src/app/auth/callback/route.test.ts` に結線テストを追加(`next=%2F%5Cevil.example` でホームへフォールバックすることを確認。code-reviewer指摘の再発防止)
+  - `npm ci` でworktreeに依存関係を導入し、`npm run lint && npm run typecheck && npm test` を実行(いずれも成功。テスト400件全通過)
+  - コミット `e8bacf2` を作成し `git push origin feature/issue-94-oauth-callback`(PR #107の既存ブランチへ追加コミット。新規PRは作成していない)
+  - PR #107にコメントで修正内容・テスト内容・確認結果・完了報告を投稿(comment id 5238190525)
+- できていないこと: なし
+- 不明点・仮置き:
+  - 旧実装の「スキームを含む値は拒否する」テストケース(`/redirect?to=javascript://evil`)の期待値を「許可」に変更した。これは個別パターンチェックが本来のセキュリティ要件(自サイト外へリダイレクトさせない)より過剰にブロックしていたための整理であり、レビュー指摘の範囲を超える判断のため、この対応方針に問題があればcode-reviewer/PMに再確認してほしい
+- 成果物:
+  - PR: #107 https://github.com/ReoKM/otaku_no_shiori/pull/107(追加コミット `e8bacf2`)
+  - `src/lib/supabase/auth-callback.ts` / `auth-callback.test.ts`
+  - `src/app/auth/callback/route.ts` / `route.test.ts`
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md

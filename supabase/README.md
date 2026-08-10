@@ -11,6 +11,7 @@
 
 1. [supabase.com](https://supabase.com) でプロジェクトを新規作成する(Organization/Region/DBパスワードを決める。Regionは日本に近い `ap-northeast-1 (Tokyo)` 推奨)
 2. Authentication → Providers で **X (Twitter)** と **Google** のOAuthを有効化する(それぞれ開発者ダッシュボードでOAuthアプリ登録が必要。これはF8実装時=W3スコープなのでW1では後回しでよい)
+   - あわせて Authentication → URL Configuration で **Site URL** と **Redirect URLs** に `<デプロイ先のオリジン>/auth/callback`(本番・Netlifyプレビュー・ローカル`http://localhost:3000/auth/callback`)を登録する。未登録だとOAuth同意後のリダイレクトがSupabase側で拒否される
 3. SQL Editor で `supabase/migrations/0001_initial_schema.sql` の内容を実行する(または Supabase CLI で `supabase db push`)
 4. Project Settings → API から次の値を取得する
 
@@ -82,11 +83,20 @@ $ curl -s localhost:3000/api/health/supabase
 
 > CIではどちらも実行しない(GitHub ActionsにSupabaseのSecretsを持たせないため)。CIが通すのはenv検証・結果整形のユニットテストのみ。
 
+## 認証コールバック(実装済み)
+
+`/auth/callback`(`src/app/auth/callback/route.ts`)がX/Google OAuth同意後のリダイレクト先。`code`パラメータを`exchangeCodeForSession`でセッションに交換し、cookieへ書き込んでからアプリへリダイレクトする。判定ロジック(安全なリダイレクト先の判定・コード交換の結果整形)は`src/lib/supabase/auth-callback.ts`。
+
+失敗時は`?authError=<理由コード>`を付けてリダイレクトする(`missing_code` / `provider_denied` / `exchange_failed`)。プロバイダの生のエラー文言はURLに含めない。
+
+> 実プロバイダ(X/Google)での実際のログイン成功確認はユニットテスト(モック)の対象外。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する(ログインボタンのUIは別タスク)。
+
 ## まだ実装していないもの(次タスク以降)
 
 - API Route(しおり作成等、ログイン後の通常CRUD)。バックエンドAPIは各機能実装タスクで追加
-- 認証(X/Google OAuth)のコールバックとセッション更新middleware(F8。W3スコープ)
 - 写真バイナリの移行(Supabase Storageへの1枚ずつアップロード。#98)
+- ログインボタン等のUI(F8。frontend-dev担当。#95)
+- ゲスト→ログインのデータ移行フロー結線(ログイン成功時に移行APIを呼ぶ処理。#99)
 - DBスキーマからの型生成(`supabase gen types`)。テーブルを実際に読み書きするAPI実装時に導入を検討
 
 ## 実装済み: ゲスト→ログインのデータ移行(テキストのみ、#97)
