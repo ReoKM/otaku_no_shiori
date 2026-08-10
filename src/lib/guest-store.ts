@@ -22,7 +22,25 @@ import type {
 } from "@/types/shiori";
 
 const DB_NAME = "otaku-no-shiori-guest";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
+
+/** `migration_state` ストアの単一行のキー(常にこの1件のみ存在する)。 */
+const MIGRATION_STATE_KEY = "guest";
+
+/**
+ * ゲスト→クラウド移行(F8・Issue #99)の完了フラグ。
+ * 参照: docs/03_tech_stack.md「ゲスト→ログインのデータ移行」手順4・6
+ * (「テキスト+写真の全件成功後にIndexedDB側へ『移行済み』フラグを付け、以後はクラウドを正とする」)
+ *
+ * `migrated: true` になった後も、このIssueのスコープでは端末内データ(shiori等)自体は
+ * 削除しない(Issue #99の指示どおり。削除は将来の別タスクの判断に委ねる)。
+ * フラグは「同じゲストデータをログインのたびに何度も再送しない」ための冪等ガードとして使う。
+ */
+export interface GuestMigrationState {
+  migrated: boolean;
+  /** 移行完了時刻(ISO8601)。未移行なら`null`。 */
+  migrated_at: string | null;
+}
 
 interface GuestStoreSchema extends DBSchema {
   shiori: {
@@ -62,6 +80,10 @@ interface GuestStoreSchema extends DBSchema {
     key: string;
     value: BudgetItem;
     indexes: { "by-shiori_id": string };
+  };
+  migration_state: {
+    key: string;
+    value: GuestMigrationState & { key: string };
   };
 }
 
@@ -111,6 +133,10 @@ function getDb(): Promise<IDBPDatabase<GuestStoreSchema>> {
         if (!db.objectStoreNames.contains("budget_items")) {
           const store = db.createObjectStore("budget_items", { keyPath: "id" });
           store.createIndex("by-shiori_id", "shiori_id");
+        }
+        // version 4: ゲスト→クラウド移行(F8)の完了フラグ用ストアを追加。
+        if (!db.objectStoreNames.contains("migration_state")) {
+          db.createObjectStore("migration_state", { keyPath: "key" });
         }
       },
     });
@@ -683,4 +709,73 @@ export async function reorderBudgetItems(shioriId: string, orderedIds: string[])
     await tx.store.put({ ...current, sort_order: i });
   }
   await tx.done;
+}
+
+// =========================================================
+// ゲスト→クラウド移行(F8・Issue #99「移行フロー結線」)
+// =========================================================
+
+/**
+ * 移行状態を取得する。まだ一度も移行していない(行が無い)場合は
+ * `{ migrated: false, migrated_at: null }` を返す。
+ */
+export async function getGuestMigrationState(): Promise<GuestMigrationState> {
+  const db = await getDb();
+  const row = await db.get("migration_state", MIGRATION_STATE_KEY);
+  if (!row) {
+    return { migrated: false, migrated_at: null };
+  }
+  return { migrated: row.migrated, migrated_at: row.migrated_at };
+}
+
+/**
+ * 移行完了フラグを立てる。呼び出し側(`src/lib/guest-migration-orchestrator.ts`)は
+ * テキスト・写真の全件成功後にのみこれを呼ぶこと。
+ *
+ * 端末内データ(shiori等)自体はこの関数では削除しない
+ * (Issue #99のスコープ。削除するかどうかは別タスクの判断に委ねる)。
+ */
+export async function markGuestDataMigrated(): Promise<void> {
+  const db = await getDb();
+  const state: GuestMigrationState & { key: string } = {
+    key: MIGRATION_STATE_KEY,
+    migrated: true,
+    migrated_at: new Date().toISOString(),
+  };
+  await db.put("migration_state", state);
+}
+
+/** 移行対象のテキストデータ一式(全しおり分をまとめて返す)。 */
+export interface GuestMigrationTextData {
+  shiori: Shiori[];
+  packing_items: PackingItem[];
+  todos: Todo[];
+  itinerary_entries: ItineraryEntry[];
+  /** UGC(自由入力)スポットのみ(このストアにはシードスポットを保存していないため)。 */
+  spots: Spot[];
+  shiori_spots: ShioriSpot[];
+}
+
+/**
+ * 全しおり分のテキストデータ(しおり本体・持ち物・TODO・旅程・自由入力スポット・
+ * 行きたいスポット紐付け)を一括で取得する。`POST /api/migration/guest`(#97)へ
+ * そのまま送るペイロードの元データとして使う(整形は`guest-migration-orchestrator.ts`の責務)。
+ */
+export async function collectAllGuestTextData(): Promise<GuestMigrationTextData> {
+  const db = await getDb();
+  const [shiori, packing_items, todos, itinerary_entries, spots, shiori_spots] = await Promise.all([
+    db.getAll("shiori"),
+    db.getAll("packing_items"),
+    db.getAll("todos"),
+    db.getAll("itinerary_entries"),
+    db.getAll("spots"),
+    db.getAll("shiori_spots"),
+  ]);
+  return { shiori, packing_items, todos, itinerary_entries, spots, shiori_spots };
+}
+
+/** 全しおり分の写真一覧を返す(`POST /api/migration/photos`(#98)へ1枚ずつ送る対象)。 */
+export async function listAllGuestPhotos(): Promise<Photo[]> {
+  const db = await getDb();
+  return db.getAll("photos");
 }
