@@ -39,8 +39,52 @@
 - `spots` の更新は本人の行のみ許可し、かつ `with check` で `source = 'ugc'` かつ `status in ('private', 'pending')` に固定(本人が `status` を直接 `public` にしたり `source` を `seed` に書き換えて審査を回避できないようにする)
 - Storage `photos` バケットは `{user_id}/{shiori_id}/{filename}` のパス規約を前提に、先頭フォルダ(`user_id`)が本人と一致する場合のみ読み書き可
 
+## Next.jsからの接続(実装済み)
+
+`src/lib/supabase/` に3種類のクライアントがある。用途で使い分ける。
+
+| ファイル | 使う場所 | 使う鍵 | RLS |
+|----------|----------|--------|-----|
+| `client.ts` (`getSupabaseBrowserClient`) | Client Component(`"use client"`) | anon | 効く |
+| `server.ts` (`createSupabaseServerClient`) | Server Component / Route Handler / Server Action | anon + Cookieのセッション | 効く |
+| `admin.ts` (`getSupabaseAdminClient`) | サーバーのみ。ゲスト→ログイン移行(F8)など限定用途 | `service_role` | **無視される** |
+
+`admin.ts` はクライアントコードからimportしないこと。`window` があれば実行時に例外を投げるガードを入れてある。
+
+## 接続確認の方法
+
+環境変数を設定したあと、次の2通りで疎通を確認できる。どちらも `spots` テーブルへ件数のみのクエリを1回投げる(未ログインでも `status = 'public'` / `source = 'seed'` を読めるRLS設定のため、ログイン不要で判定できる)。
+
+### 1. CLIから
+
+```
+$ npm run check:supabase
+Supabase接続チェック
+
+✓ NEXT_PUBLIC_SUPABASE_URL https://xxxxxxxx.supabase.co
+✓ NEXT_PUBLIC_SUPABASE_ANON_KEY sb_publishable_… (46文字)
+✓ SUPABASE_SERVICE_ROLE_KEY sb_secret_… (41文字)
+
+✓ spots テーブルへ接続成功 (anonキーで見えている行数: 0)
+```
+
+失敗時は終了コード1と、原因別の対処ヒント(マイグレーション未適用 / APIキー不正 / URL・ネットワーク)を表示する。鍵の値そのものは表示しない。
+
+### 2. アプリのAPIから
+
+```
+$ npm run dev
+$ curl -s localhost:3000/api/health/supabase
+{"ok":true,"table":"spots","visibleRowCount":0}
+```
+
+失敗時はHTTP 503と `{"ok":false,...,"hint":"..."}` を返す。
+
+> CIではどちらも実行しない(GitHub ActionsにSupabaseのSecretsを持たせないため)。CIが通すのはenv検証・結果整形のユニットテストのみ。
+
 ## まだ実装していないもの(次タスク以降)
 
-- Next.jsからSupabaseクライアントを呼び出すコード(`src/lib/supabase/`)。F1〜F3実装時に追加
 - API Route(しおり作成等)。バックエンドAPIは各機能実装タスクで追加
+- 認証(X/Google OAuth)のコールバックとセッション更新middleware(F8。W3スコープ)
 - ゲスト→ログインのデータ移行処理(F8。W3スコープ)
+- DBスキーマからの型生成(`supabase gen types`)。テーブルを実際に読み書きするAPI実装時に導入を検討
