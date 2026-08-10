@@ -29,18 +29,19 @@
     - `npm run check:supabase` → `✓ spots テーブルへ接続成功 (anonキーで見えている行数: 0)`。既存プロジェクトにマイグレーション0001が適用済みであることも同時に確認できた
     - `npm run dev` + `curl localhost:3000/api/health/supabase` → HTTP 200 / `{"ok":true,"table":"spots","visibleRowCount":0}`
     - 異常系: 存在しないURLを環境変数で渡して実行 → 終了コード1、`hint` にURL・ネットワーク確認の案内が出ることを確認
+    - Netlifyプレビューデプロイ(`https://deploy-preview-89--otaku-no-shiori.netlify.app/api/health/supabase`)→ HTTP 200 / `{"ok":true,...}`。本番同等ビルドでの動作と、Netlify環境変数(URL・anonキー)が設定済みであることを確認
   - `npm run lint && npm run typecheck && npm test` すべて成功(テスト373件全通過、lintエラー・警告なし)
 - できていないこと:
   - `GET /api/health/supabase` の異常系(環境変数未設定時の503)を実サーバーで実行しての確認。環境変数を外すにはdevサーバー再起動が要るため、ユニットテスト(`env.test.ts`)と `health.ts` の分岐テストで担保した
   - DBスキーマからの型生成(`supabase gen types`)。現状クライアントは `SupabaseClient`(型引数なし)で、テーブルの列名・型は静的検査されない。実際にテーブルを読み書きするAPI実装タスクで導入を検討する
   - 認証まわり(OAuthコールバック、セッション更新middleware)は未着手。F8=W3スコープのため今回は対象外
-  - Netlifyプレビューデプロイでの確認(Netlify環境変数へのキー登録はオーナー作業のため未実施)
+  - `SUPABASE_SERVICE_ROLE_KEY` がNetlifyに設定済みかの確認。今回の疎通チェックはanonキーしか使わないため未検証(F8の移行API実装時に必要になる)
 - 不明点・仮置き:
   - 疎通確認の対象テーブルを `spots` に仮置きした。仕様に指定は無い。ログイン不要で読めるRLS設定を持つ唯一のテーブルであることを理由に選定
   - `GET /api/health/supabase` は認証なしで誰でも叩ける。返す情報はテーブルの到達可否とPostgRESTのエラーコード/メッセージのみで鍵・URLは含めないが、本番公開前に「認証必須にするか」「本番では無効化するか」をPM/オーナー判断で決めたい
   - `.env.local` は上位ディレクトリからプロジェクトルートへ「コピー」した(削除は不可逆のため元ファイルは残している)。上位の重複ファイルを消すかはオーナー判断
 - 成果物:
-  - PR: (作成後にURLを追記)
+  - PR: #89 https://github.com/ReoKM/otaku_no_shiori/pull/89
   - `src/lib/supabase/env.ts` / `client.ts` / `server.ts` / `admin.ts` / `health.ts`
   - `src/lib/supabase/env.test.ts` / `health.test.ts`
   - `src/app/api/health/supabase/route.ts`
