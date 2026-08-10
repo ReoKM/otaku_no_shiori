@@ -249,3 +249,30 @@
   - `src/lib/guest-photo-migration.ts` / `guest-photo-migration.test.ts`(新規)
   - `supabase/README.md`(更新)
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
+
+## 16:33 PR #111 code-reviewer差し戻し対応(写真枚数上限のサーバー側未検証)
+- Goal: PR #111(`feature/issue-98-guest-migration-photos`)に対し、`migrateGuestPhoto`でphotos件数のサーバー側上限チェック(`getMaxPhotosPerShiori()`再利用)を追加し、テストを通して同ブランチにpushする
+- 結果: 達成
+- やったこと:
+  - 作業ディレクトリが別ブランチ(`claude/google-oauth-chat-issue-3h1bby`)を指していたため、`git fetch origin feature/issue-98-guest-migration-photos && git checkout feature/issue-98-guest-migration-photos`で対象ブランチへ切り替え
+  - `src/lib/guest-photo-migration.ts`の`migrateGuestPhoto`に、しおり所有権確認と同じタイミングで写真枚数上限チェックを追加
+    - `admin.from("photos").select("id", { count: "exact", head: true }).eq("shiori_id", ...).neq("id", input.photo_id)`で、自分自身(同じ`photo_id`)を除いた既存件数を取得(既存の`src/lib/health.ts`の`{ count: "exact", head: true }`パターンを踏襲)
+    - 既存の`getMaxPhotosPerShiori()`(`src/lib/photo-limit.ts`)と比較し、`existingOtherPhotoCount >= max`なら新規理由コード`photo_limit_exceeded`で拒否。上限値はここで再定義せず再利用のみ
+    - 自分自身を除外することで、同じ`photo_id`での冪等な再送を上限超過として誤検知しないようにした
+    - カウントクエリ自体が失敗した場合用に`photo_limit_check_failed`理由コードを追加(fail-closed。既存の`shiori_not_owned`/`storage_upload_failed`/`db_insert_failed`と同じ「段階ごとに理由コードを分ける」既存方針を踏襲)
+  - `src/app/api/migration/photos/route.ts`: `photo_limit_exceeded`を409、`photo_limit_check_failed`はその他技術的失敗と同じ502にマッピング。JSDocのレスポンス例・説明を更新
+  - テスト追加:
+    - `src/lib/guest-photo-migration.test.ts`: `fakeAdminClient`に`existingOtherPhotoCount`オプション(count/countError双方を模擬)を追加し、`photos`テーブルの`select().eq().neq()`チェーンをモック。新規describe「写真枚数上限(F6)のサーバー側強制」に6件追加(上限未満/上限ちょうど=追加後に上限へ達する境界/上限超過/既定値20での上限超過/自分自身除外の確認/カウントクエリ失敗)。既存の成功ケース・IDOR拒否ケースにも`countQueryCalls`の検証を追加
+    - `src/app/api/migration/photos/route.test.ts`: `fakeAdminClient`に同様に`existingOtherPhotoCount`を追加し、409レスポンス・境界での200レスポンスのテストを2件追加
+  - `npm run lint && npm run typecheck && npm test`すべて成功(45ファイル479件全通過、lintエラー・警告なし)
+  - コミット`cd4a8d2`として`feature/issue-98-guest-migration-photos`に追加コミットし、`git push origin feature/issue-98-guest-migration-photos`で同ブランチへpush(新規PR作成なし、PR #111へ追加コミット)
+  - PR #111へ対応内容と完了報告をコメント投稿
+- できていないこと: なし
+- 不明点・仮置き:
+  - 理由コード名`photo_limit_exceeded`はレビュー指摘コメントの例示どおり採用
+  - カウントクエリ自体の失敗用に`photo_limit_check_failed`(502)を独自追加した点はレビュー指摘に明示は無いが、既存の段階別理由コード方針(`shiori_not_owned`等)と一貫させるための軽微な拡張として仮置き
+- 成果物:
+  - PR #111(https://github.com/ReoKM/otaku_no_shiori/pull/111)へのコミット`cd4a8d2`
+  - `src/lib/guest-photo-migration.ts` / `src/lib/guest-photo-migration.test.ts`
+  - `src/app/api/migration/photos/route.ts` / `src/app/api/migration/photos/route.test.ts`
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
