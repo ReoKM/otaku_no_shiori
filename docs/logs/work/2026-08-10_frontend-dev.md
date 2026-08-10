@@ -1,0 +1,42 @@
+## 16:20 S6画面: ログインボタン実装(X/Google)
+
+- Goal: Issue #95に基づき、S6画面(未ログイン状態のレイアウト)にX/GoogleのOAuthログインボタンを実装し、`supabase.auth.signInWithOAuth`を正しい引数で呼び出すコードとテストを追加し、lint/typecheck/testを全て通した状態でブランチをpushする
+- 結果: 達成
+- やったこと:
+  - `docs/design/screens/S6_設定アカウント.md`・`docs/plans/2026-W33.md`(F8ウェーブ分解)を読み、Issue #95のスコープが「未ログイン状態のレイアウト+ログインボタン」であり、`LoggedInSection`(ログイン後表示)はIssue #96の別スコープであることを確認
+  - `main`から`feature/issue-95-login-buttons`ブランチを作成
+  - 既存実装パターンを調査(`src/app/shiori/[id]/itinerary/page.tsx`+`ItineraryRoute.tsx`のuseSearchParams+Suspense分割、`src/lib/supabase/auth-callback.ts`のロジック分離・ユニットテスト方針、`docs/design/tokens.md`のトークン運用)
+  - `src/lib/supabase/oauth-login.ts`を新規実装: `buildOAuthRedirectTo(origin)`(常に自オリジン+`/auth/callback?next=/settings`から`new URL`で組み立て、外部ドメインを渡す余地を無くす)と`signInWithProvider(supabase, provider, origin)`(`signInWithOAuth`を呼び例外も握って`{ok:false}`を返す)
+  - `src/lib/supabase/oauth-login.test.ts`を追加(7件): redirectTo組み立て、X/Google押下時の引数検証、Supabaseエラー時のハンドリング、例外ハンドリング、オープンリダイレクト対策の確認
+  - `src/app/settings/page.tsx`(Server Component、`force-static`)+`src/components/settings/SettingsRoute.tsx`(Client、`useSearchParams`で`authError`クエリを読む)を実装
+  - `src/components/settings/`配下にS6未ログイン状態のコンポーネントを実装: `SettingsHeader`(戻る+タイトル)、`GuestNotice`、`LoginButtons.tsx`(`LoginButtonX`/`LoginButtonGoogle`、ローディング表示・二重タップ防止・オフライン時のインライン注意文言)、`LoginErrorNotice`、`OfflineNotice`(`navigator.onLine`+`online`/`offline`イベント検知)、`LegalLinks`、`icons.tsx`(X/Googleの公式ロゴマークSVG、トークン対象外)
+  - `LoggedOutSection`が全体の状態(どちらのボタンが処理中か・ログイン失敗・オフライン)を保持し、`signInWithProvider`を呼ぶ
+  - `npm run lint`(React Compiler由来の「effect内で直接setStateしない」エラーを`isOnline`の遅延初期化で解消)・`npm run typecheck`(`vi.fn()`の型推論エラーを`toHaveBeenCalledWith`ベースの検証に変更して解消)・`npm test`(478件全通過)を確認
+  - コミット後、pushしようとした際にこの作業環境が別セッション(Issue #98 写真移行API実装)とgit作業ディレクトリ(HEAD)を共有していることが判明。私のコミットが一時的に`feature/issue-98-guest-migration-photos`ブランチの上に乗ってしまっていたため、`git cherry-pick`で正しい`feature/issue-95-login-buttons`ブランチへ移し、`feature/issue-98-guest-migration-photos`ローカルブランチは`origin`の状態(誤コミット追加前、既にpush済みだった`edca1df`)に戻して復旧。pushはしていなかったため実害は無い
+  - `feature/issue-95-login-buttons`をoriginへpush
+- できていないこと:
+  - 実プロバイダ(X/Google)での実ログイン成功確認は、この環境にブラウザでの対話的なOAuth同意操作を行う手段が無いため未実施(Wave 1のIssue #94実装時と同じ制約)。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する前提
+  - ブラウザでのボタン押下→React再レンダリングを検証するDOM/コンポーネントテストは追加していない(後述の仮置き参照)。`npm run lint && npm run typecheck && npm test`の実行結果はいずれも成功
+  - `LoggedInSection`(ログイン中プロバイダ表示・データ移行状態カード・ログアウトボタン)は実装していない(Issue #96のスコープ。認証状態の判定・分岐ロジックもこのPRには含めていない)。このため、ログイン成功後に`/settings`へ戻ってきたユーザーには現状`LoggedOutSection`(ゲスト向けの案内・ログインボタン)がそのまま表示され続ける。Issue #96で解消される想定
+- 不明点・仮置き:
+  - このリポジトリにはReact Testing Library/jsdomが導入されておらず(`vitest.config.ts`は`environment: "node"`、`package.json`にRTL依存なし)、既存のOAuthコールバック関連テスト(`auth-callback.test.ts`)も「ロジックをUIから切り出してユニットテストする」方針を取っている。本PRもこれを踏襲し、`signInWithOAuth`呼び出しロジックを`src/lib/supabase/oauth-login.ts`に切り出してユニットテストした(タスク指示の「コンポーネントテスト等」を、実際のDOMレンダリング無しでロジックを検証するテストとして解釈)。RTL/jsdom導入は新規外部依存の追加でありPRでの理由記載・レビュー承認が必要な事項のため、本PRの範囲では見送った
+  - `redirectTo`について、タスク指示は`<origin>+'/auth/callback'`のみを明示していたが、S6仕様の`LoginErrorNotice`(「コールバックからエラーで復帰した場合」に表示)を実際に機能させるため`?next=/settings`を付与する実装にした(`next`パラメータは`src/app/auth/callback/route.ts`が既に対応済み、値は`/settings`固定でユーザー入力を経由しないためオープンリダイレクトの余地は無い)。付与しない場合はエラー時に`/`(ホーム)へ戻り、S6の`LoginErrorNotice`は現状の配線では到達しないため、仕様どおりの挙動を優先した
+  - `LoggedInSection`(#96)を実装していないため、ログイン成功後に`/settings`へ戻るとログインボタンがまだ見える状態が残る(上記「できていないこと」参照)。Issue #96側でauthStateの判定・分岐を実装する前提とし、本PRではあえて分岐ロジックを作り込まなかった(スコープの重複・競合を避けるため)
+  - 戻るボタンは`docs/design/screens/S6_設定アカウント.md`の「直前の画面(通常はS1)へ戻る」に従い、`BackButton`のデフォルト(`router.back()`、`fallbackHref`無し)をそのまま使った
+  - X/Googleのアイコンは第三者ブランドの簡易SVGパス(モノクロX・4色Google "G")をインラインで実装した(外部アセット取得・追加ライブラリ無し)
+  - 作業環境がIssue #98実装セッションとgit作業ディレクトリを共有していたため、一時的にコミットが混線した(詳細は「やったこと」参照)。復旧済みで実害無し(未pushの誤コミットを削除しただけ)だが、環境側の問題として申し送りする
+- 成果物:
+  - ブランチ: `feature/issue-95-login-buttons`(origin にpush済み、PR未作成。オーケストレーター側でPR作成予定)
+  - コミット: `d9ac47d feat: S6設定画面にX/Googleログインボタンを実装 (#95)`
+  - 変更ファイル一覧:
+    - `src/app/settings/page.tsx`
+    - `src/components/settings/SettingsHeader.tsx`
+    - `src/components/settings/SettingsRoute.tsx`
+    - `src/components/settings/GuestNotice.tsx`
+    - `src/components/settings/LoginButtons.tsx`
+    - `src/components/settings/LoginErrorNotice.tsx`
+    - `src/components/settings/OfflineNotice.tsx`
+    - `src/components/settings/LegalLinks.tsx`
+    - `src/components/settings/icons.tsx`
+    - `src/lib/supabase/oauth-login.ts`
+    - `src/lib/supabase/oauth-login.test.ts`
