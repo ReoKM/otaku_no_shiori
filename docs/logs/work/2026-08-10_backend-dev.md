@@ -87,3 +87,30 @@
   - `src/lib/guest-migration.ts` / `guest-migration.test.ts`
   - `src/lib/seed-spot-db-id.ts` / `seed-spot-db-id.test.ts`
   - `supabase/README.md`(更新)
+
+## 09:20 PR #108のcode-reviewer必須指摘(IDOR)修正
+
+- Goal: PR #108(`feature/issue-97-guest-migration-api-text`、Issue #97)へのcode-reviewer差し戻し(子データのIDOR脆弱性)を修正し、既存PRに追加コミットしてpushする
+- 結果: 達成
+- やったこと:
+  - `git fetch origin feature/issue-97-guest-migration-api-text && git checkout feature/issue-97-guest-migration-api-text`
+  - 指摘内容を再確認: `src/lib/guest-migration.ts`(`migrateGuestData`)で`packing_items`/`todos`/`itinerary_entries`/`shiori_spots`のupsert前に、参照する`shiori_id`のDB上の実所有者を検証していなかった。`shiori`upsertは`onConflict: "id", ignoreDuplicates: true`のため、攻撃者が他人の既存しおりの実UUIDを自分のリクエストの`shiori[]`に含めても、そのshiori行自体は無視されるだけで、同じshiori_idを参照する子データはservice_role経由で所有権チェック無しにそのままINSERTされてしまうIDOR
+  - `migrateGuestData`に対応を追加:
+    - `packing_items`/`todos`/`itinerary_entries`/`shiori_spots`が参照する`shiori_id`一覧を収集し、`admin.from("shiori").select("id").in("id", ids).eq("user_id", userId)`でDB上の実所有者を確認
+    - 「今回このユーザーとして新規挿入した行」または「既にこのユーザー所有として存在していた行(再送リトライを含む)」のいずれでもない`shiori_id`を参照する子データはINSERTせずスキップ(拒否ではなくスキップ。既存の`unknown_seed_spot`と同じ「一部除外・継続」方針に揃えた)
+    - スキップ件数を`GuestMigrationResult.skipped.unauthorized_shiori_id`として新規に返すようにした(通常は0)
+    - 子データが1件も無い場合は所有権確認クエリ自体を呼ばない(無駄なDB往復を増やさない)
+  - `src/app/api/migration/guest/route.ts`のJSDocレスポンス例を新フィールドに合わせて更新
+  - `src/lib/guest-migration.test.ts`: フェイクadminクライアントに`shiori`テーブルの`select().in().eq()`チェーンのモックを追加(デフォルトは全id所有扱いで既存テストの挙動を変えない設計)。IDORシナリオのテスト3件を追加(所有権が確認できないshiori_idを参照する子データが1件もupsertされないこと/所有権が確認できる場合は従来どおりupsertされること/子データが無ければ確認クエリを呼ばないこと)。既存テストの`skipped`期待値に新フィールドを追記
+  - `npm install`(node_modules未展開だったため)→ `npm run lint && npm run typecheck && npm test` すべて成功(lint: エラー・警告なし / typecheck: エラーなし / test: 39ファイル410件全通過)
+  - コミット(6680791)してPR #108のブランチへpush、PR #108にコメントで対応内容と完了報告を投稿
+- できていないこと:
+  - 実データでの疎通確認(実Supabaseへの実INSERT)は元PR時点から引き続き未実施。この作業環境に実Supabaseの鍵が無いため。今回の修正の検証はユニットテスト(フェイクSupabaseクライアント)のみ
+- 不明点・仮置き:
+  - 所有権チェックに失敗した子データの扱いを「リクエスト全体をエラーにして拒否」ではなく「その行だけスキップして移行は継続」とした。タスク指示で「仕様上どちらが適切か判断し、完了報告に明記する」とされていたための判断で、仕様(docs/03_tech_stack.md)に明記は無い。理由: (1) 既存の`unknown_seed_spot`スキップと一貫させる、(2) 通常のユーザー操作ではこの分岐に到達しない(到達するのは攻撃時か想定外のバグ時のみ)ため、全体を失敗させて正当なデータの移行まで巻き込むより、不正行だけを除外して残りを進める方が移行APIの目的(ゲストデータをできるだけ救う)に合う
+- 成果物:
+  - PR #108 https://github.com/ReoKM/otaku_no_shiori/pull/108(追加コミット 6680791)
+  - `src/lib/guest-migration.ts`(IDOR対策の所有権確認・フィルタリングを追加)
+  - `src/lib/guest-migration.test.ts`(IDORシナリオのテスト追加)
+  - `src/app/api/migration/guest/route.ts`(JSDocのレスポンス例更新)
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
