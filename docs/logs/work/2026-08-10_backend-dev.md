@@ -50,3 +50,35 @@
   - `tsconfig.json`(`allowImportingTsExtensions`)
   - `supabase/README.md`
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
+
+## 16:10 OAuthコールバックルート(/auth/callback)の実装
+
+- Goal: OAuthコールバックルート(`/auth/callback`)を実装し、X/GoogleのOAuthログインが完了できる状態にする
+- 結果: 達成(実プロバイダでの実ログイン確認を除く。理由は「できていないこと」参照)
+- やったこと:
+  - `origin/main`(PR #89・#103マージ済み)から `feature/issue-94-oauth-callback` ブランチを作成
+  - `src/lib/supabase/auth-callback.ts`: 判定ロジックを切り出し
+    - `isSafeRedirectPath` / `resolveRedirectPath`: `next`クエリパラメータの安全性判定。絶対URL・`//`始まり・スキーム混入・512文字超はホーム(`/`)にフォールバック(オープンリダイレクト対策)
+    - `buildRedirectUrl` / `buildAuthErrorRedirectUrl`: 成功時・失敗時のリダイレクトURL組み立て。失敗時は`authError=<理由コード>`(`missing_code` / `provider_denied` / `exchange_failed`)のみ付与し、プロバイダの生エラー文言はURLに含めない
+    - `exchangeAuthCode`: `supabase.auth.exchangeCodeForSession(code)` のラッパー。例外を投げず結果オブジェクトを返す(`health.ts`と同じ方針)
+  - `src/app/auth/callback/route.ts`: `GET /auth/callback`。`code`必須チェック→`error`(プロバイダ側拒否)チェック→コード交換→成功/失敗でリダイレクト。`dynamic = "force-dynamic"`
+  - テスト16件追加:
+    - `src/lib/supabase/auth-callback.test.ts`(13件): 安全なリダイレクト先判定・URL組み立て・コード交換の結果整形(成功/Supabaseエラー/例外)
+    - `src/app/auth/callback/route.test.ts`(7件): `createSupabaseServerClient`をモックしたルート結線テスト(code欠如・provider拒否・交換成功/失敗/例外・next指定・next不正時のフォールバック)
+  - `supabase/README.md` 更新: オーナー作業に「Authentication → URL Configuration へ `/auth/callback` を登録する」手順を追加、「まだ実装していないもの」からコールバックを外し実装済みセクションを新設
+  - `npm run lint && npm run typecheck && npm test` すべて成功(テスト397件全通過。今回追加16件)
+- できていないこと:
+  - **実プロバイダ(X/Google)での実際のログイン成功確認**。ブラウザでの対話的なOAuth同意操作と実プロバイダの認証情報が要るため、この自動化コーディングエージェントの作業環境では実施できない。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する
+  - セッション更新middleware(トークン自動リフレッシュ)。Issue #94の依頼内容に含まれないため対象外とし、`supabase/README.md`の未実装リストに残した
+  - ログインボタン等のUI実装(Issue #95・frontend-dev担当)
+  - ゲストデータ移行APIとの結線(Issue #99等)
+- 不明点・仮置き:
+  - Issue #94本文には当初「実プロバイダE2E確認はタスク#2(オーナー作業)完了後」という留保があったが、Issueコメント(オーナー)で「Issue #91がクローズ済みのため留保解除。実プロバイダでのログイン成功確認を完了条件に含めてよい」と追記されていた。一方、本タスクの指示元(呼び出し元エージェント)からは「実プロバイダでの実ログイン確認はこの作業環境では実施できない(ブラウザ対話操作が必要なため自動化エージェントの作業範囲外)」と明示されていた。ブラウザ対話・実認証情報が無いという環境制約は指示の変更によって解消するものではないため、指示元の指示どおり「コード実装+モックテストまで」をスコープとして進めた。Issueコメントの期待とのギャップがあるため、PM/オーナーに確認してほしい
+  - 成功時のリダイレクト先をS1(ホーム`/`)に仮置きした。S6(設定/アカウント画面)が未実装のため。`next`クエリパラメータで上書き可能にし、将来のログインボタン実装(Issue #95)から遷移元を指定できるようにしてある
+  - 失敗時のリダイレクト形式(`?authError=<理由コード>`)を仮置きした。仕様書に具体的なエラーUI仕様が無いため、フロント側が拾いやすい最小限の固定コードにした(プロバイダの生メッセージは含めない)
+- 成果物:
+  - PR: (このセッションで作成。PR番号は完了報告参照)
+  - `src/lib/supabase/auth-callback.ts` / `auth-callback.test.ts`
+  - `src/app/auth/callback/route.ts` / `route.test.ts`
+  - `supabase/README.md`
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
