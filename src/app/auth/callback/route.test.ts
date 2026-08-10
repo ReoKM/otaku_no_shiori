@@ -108,4 +108,21 @@ describe("GET /auth/callback", () => {
 
     expect(res.headers.get("location")).toBe("https://example.com/");
   });
+
+  it("nextがバックスラッシュ経由の外部URLなら無視してホームへフォールバックする(オープンリダイレクト対策)", async () => {
+    // /\evil.example は startsWith("/") ・ startsWith("//") ・ includes("://") の
+    // 文字列チェックをすべて回避するが、`new URL("/\\evil.example", origin)` は
+    // WHATWG URL仕様(特別スキームでのバックスラッシュ→スラッシュ正規化)により
+    // `https://evil.example/` に解決される。ここではその値が実際にホームへ
+    // フォールバックすることを確認する(code-reviewer指摘の再発防止)。
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+
+    const res = await GET(
+      new Request(
+        "https://example.com/auth/callback?code=abc123&next=%2F%5Cevil.example",
+      ),
+    );
+
+    expect(res.headers.get("location")).toBe("https://example.com/");
+  });
 });

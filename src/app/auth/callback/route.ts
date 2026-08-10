@@ -37,7 +37,10 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const providerError = url.searchParams.get("error");
-  const redirectPath = resolveRedirectPath(url.searchParams.get("next"));
+  const redirectPath = resolveRedirectPath(
+    url.searchParams.get("next"),
+    url.origin,
+  );
 
   if (providerError) {
     return Response.redirect(

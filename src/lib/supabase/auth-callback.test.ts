@@ -33,52 +33,74 @@ function fakeClient(response: ExchangeResponse): SupabaseClient {
   } as unknown as SupabaseClient;
 }
 
+const ORIGIN = "https://example.com";
+
 describe("isSafeRedirectPath", () => {
   it("自サイト内の相対パスは許可する", () => {
-    expect(isSafeRedirectPath("/")).toBe(true);
-    expect(isSafeRedirectPath("/shiori/abc123")).toBe(true);
+    expect(isSafeRedirectPath("/", ORIGIN)).toBe(true);
+    expect(isSafeRedirectPath("/shiori/abc123", ORIGIN)).toBe(true);
   });
 
   it("絶対URLは拒否する", () => {
-    expect(isSafeRedirectPath("https://evil.example/")).toBe(false);
-    expect(isSafeRedirectPath("http://evil.example/")).toBe(false);
+    expect(isSafeRedirectPath("https://evil.example/", ORIGIN)).toBe(false);
+    expect(isSafeRedirectPath("http://evil.example/", ORIGIN)).toBe(false);
   });
 
   it("プロトコル相対URL(//)は拒否する", () => {
-    expect(isSafeRedirectPath("//evil.example/")).toBe(false);
+    expect(isSafeRedirectPath("//evil.example/", ORIGIN)).toBe(false);
   });
 
-  it("スキームを含む値は拒否する", () => {
-    expect(isSafeRedirectPath("/redirect?to=javascript://evil")).toBe(false);
+  it("自サイト内のパスなら、クエリ値にスキームらしき文字列が含まれても許可する(originが自サイトのままのため)", () => {
+    // 例: /redirect?to=javascript://evil はブラウザを example.com から動かさない。
+    // 危険なのは「解決後のoriginが変わること」であり、クエリ文字列の中身ではない。
+    expect(
+      isSafeRedirectPath("/redirect?to=javascript://evil", ORIGIN),
+    ).toBe(true);
+  });
+
+  it("バックスラッシュ経由のオープンリダイレクトは拒否する", () => {
+    // WHATWG URL仕様では特別スキーム(http/https)においてバックスラッシュが
+    // スラッシュと同等に扱われるため、`new URL("/\\evil.example", origin)` は
+    // `https://evil.example/` に解決される。文字列チェック(`//`・`://`)だけでは
+    // 検知できないため、origin比較で根本的に拒否できることを確認する。
+    expect(isSafeRedirectPath("/\\evil.example", ORIGIN)).toBe(false);
+    expect(isSafeRedirectPath("/\\\\evil.example", ORIGIN)).toBe(false);
+    expect(isSafeRedirectPath("/\\/evil.example", ORIGIN)).toBe(false);
   });
 
   it("先頭がスラッシュでない値は拒否する", () => {
-    expect(isSafeRedirectPath("evil.example")).toBe(false);
+    expect(isSafeRedirectPath("evil.example", ORIGIN)).toBe(false);
   });
 
   it("空文字は拒否する", () => {
-    expect(isSafeRedirectPath("")).toBe(false);
+    expect(isSafeRedirectPath("", ORIGIN)).toBe(false);
   });
 
   it("異常に長い値は拒否する", () => {
-    expect(isSafeRedirectPath("/" + "a".repeat(1000))).toBe(false);
+    expect(isSafeRedirectPath("/" + "a".repeat(1000), ORIGIN)).toBe(false);
   });
 });
 
 describe("resolveRedirectPath", () => {
   it("未指定ならデフォルト(ホーム)にフォールバックする", () => {
-    expect(resolveRedirectPath(null)).toBe(DEFAULT_REDIRECT_PATH);
+    expect(resolveRedirectPath(null, ORIGIN)).toBe(DEFAULT_REDIRECT_PATH);
   });
 
   it("安全な相対パスはそのまま使う", () => {
-    expect(resolveRedirectPath("/shiori/abc")).toBe("/shiori/abc");
+    expect(resolveRedirectPath("/shiori/abc", ORIGIN)).toBe("/shiori/abc");
   });
 
   it("外部URLはデフォルトにフォールバックする(オープンリダイレクト対策)", () => {
-    expect(resolveRedirectPath("https://evil.example/")).toBe(
+    expect(resolveRedirectPath("https://evil.example/", ORIGIN)).toBe(
       DEFAULT_REDIRECT_PATH,
     );
-    expect(resolveRedirectPath("//evil.example/")).toBe(
+    expect(resolveRedirectPath("//evil.example/", ORIGIN)).toBe(
+      DEFAULT_REDIRECT_PATH,
+    );
+  });
+
+  it("バックスラッシュ経由の外部URLもデフォルトにフォールバックする", () => {
+    expect(resolveRedirectPath("/\\evil.example", ORIGIN)).toBe(
       DEFAULT_REDIRECT_PATH,
     );
   });

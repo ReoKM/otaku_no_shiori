@@ -18,27 +18,40 @@ export const DEFAULT_REDIRECT_PATH = "/";
 /**
  * `next`クエリパラメータが「自サイト内の相対パス」として安全かを判定する。
  *
+ * 個別パターン(`//`・`://`・バックスラッシュ等)を後追いでブロックする方式は
+ * 新しいバイパス手法に弱いため採用しない。代わりに、実際にリダイレクトへ使う
+ * `new URL(path, origin)` を判定側でも同じように解決し、結果の`origin`が
+ * 期待どおり自サイトのままかで判定する(WHATWG URL仕様に沿った根本対策)。
+ *
+ * 例えば `/\evil.example` はいずれの文字列チェックもすり抜けるが、
+ * 特別スキーム(http/https)ではバックスラッシュがスラッシュとして扱われるため
+ * `new URL("/\\evil.example", "https://good.example")` は
+ * `https://evil.example/` に解決される。この関数はその解決後の`origin`を見て拒否する。
+ *
  * 拒否する例:
  * - `https://evil.example/` (絶対URL)
  * - `//evil.example/`(プロトコル相対URL。ブラウザは外部サイトとして扱う)
+ * - `/\evil.example`(バックスラッシュ経由。`new URL`解決後に外部originになる)
  * - `/x`.repeat(1000)(異常に長い値)
  *
  * 許可する例: `/`, `/shiori/abc123`
  */
-export function isSafeRedirectPath(path: string): boolean {
+export function isSafeRedirectPath(path: string, origin: string): boolean {
   if (path.length === 0 || path.length > MAX_NEXT_PATH_LENGTH) {
     return false;
   }
   if (!path.startsWith("/")) {
     return false;
   }
-  if (path.startsWith("//")) {
+
+  let resolved: URL;
+  try {
+    resolved = new URL(path, origin);
+  } catch {
     return false;
   }
-  if (path.includes("://")) {
-    return false;
-  }
-  return true;
+
+  return resolved.origin === new URL(origin).origin;
 }
 
 /**
@@ -47,15 +60,20 @@ export function isSafeRedirectPath(path: string): boolean {
  * 未指定・不正な値(外部URLなど)は必ず`DEFAULT_REDIRECT_PATH`にフォールバックする
  * (オープンリダイレクト対策)。
  *
- * 例: `resolveRedirectPath("/shiori/abc")` → `"/shiori/abc"`
- * 例: `resolveRedirectPath("https://evil.example")` → `"/"`
- * 例: `resolveRedirectPath(null)` → `"/"`
+ * 例: `resolveRedirectPath("/shiori/abc", "https://example.com")` → `"/shiori/abc"`
+ * 例: `resolveRedirectPath("https://evil.example", "https://example.com")` → `"/"`
+ * 例: `resolveRedirectPath(null, "https://example.com")` → `"/"`
  */
-export function resolveRedirectPath(nextParam: string | null): string {
+export function resolveRedirectPath(
+  nextParam: string | null,
+  origin: string,
+): string {
   if (!nextParam) {
     return DEFAULT_REDIRECT_PATH;
   }
-  return isSafeRedirectPath(nextParam) ? nextParam : DEFAULT_REDIRECT_PATH;
+  return isSafeRedirectPath(nextParam, origin)
+    ? nextParam
+    : DEFAULT_REDIRECT_PATH;
 }
 
 /** `/auth/callback`が失敗しうる理由。フロント側でユーザー向けメッセージを出し分けるためのコード。 */
