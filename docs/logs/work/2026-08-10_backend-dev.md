@@ -22,7 +22,7 @@
     - 鍵の値は表示せず、接頭辞(`sb_publishable_…`)と文字数のみ。URLは公開情報かつ打ち間違い発見に必要なのでそのまま表示
     - Nodeの型ストリッピングで `.mts` を直接実行(`--env-file-if-exists=.env.local`)。実験的機能の警告は `--disable-warning` で抑止
   - `tsconfig.json`: `allowImportingTsExtensions: true` を追加(`scripts/*.mts` から `.ts` を相対importするため。`noEmit` なので出力への影響なし)
-  - テスト14件追加: `src/lib/supabase/env.test.ts`(9件)/ `src/lib/supabase/health.test.ts`(11件)。実Supabaseへは接続せず、CIにSecretsを不要にした
+  - テスト19件追加: `src/lib/supabase/env.test.ts`(8件)/ `src/lib/supabase/health.test.ts`(11件)。実Supabaseへは接続せず、CIにSecretsを不要にした
   - `supabase/README.md` 更新: 3クライアントの使い分け表、接続確認2通りの手順と出力例、次タスク以降の未実装リストを更新
   - ローカル `.env.local` をNext.jsのプロジェクトルート(`otaku_no_shiori/`)に配置。元は1つ上の階層にあり、Nextから読めていなかった(`.gitignore` の `.env*` に該当し追跡外であることを確認済み)
   - 動作確認:
@@ -30,7 +30,7 @@
     - `npm run dev` + `curl localhost:3000/api/health/supabase` → HTTP 200 / `{"ok":true,"table":"spots","visibleRowCount":0}`
     - 異常系: 存在しないURLを環境変数で渡して実行 → 終了コード1、`hint` にURL・ネットワーク確認の案内が出ることを確認
     - Netlifyプレビューデプロイ(`https://deploy-preview-89--otaku-no-shiori.netlify.app/api/health/supabase`)→ HTTP 200 / `{"ok":true,...}`。本番同等ビルドでの動作と、Netlify環境変数(URL・anonキー)が設定済みであることを確認
-  - `npm run lint && npm run typecheck && npm test` すべて成功(テスト373件全通過、lintエラー・警告なし)
+  - `npm run lint && npm run typecheck && npm test` すべて成功(テスト374件全通過、lintエラー・警告なし)
 - できていないこと:
   - `GET /api/health/supabase` の異常系(環境変数未設定時の503)を実サーバーで実行しての確認。環境変数を外すにはdevサーバー再起動が要るため、ユニットテスト(`env.test.ts`)と `health.ts` の分岐テストで担保した
   - DBスキーマからの型生成(`supabase gen types`)。現状クライアントは `SupabaseClient`(型引数なし)で、テーブルの列名・型は静的検査されない。実際にテーブルを読み書きするAPI実装タスクで導入を検討する
