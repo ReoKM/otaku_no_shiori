@@ -13,9 +13,9 @@ import { OfflineNotice } from "./OfflineNotice";
  * S6未ログイン状態のセクション。
  * 参照: docs/design/screens/S6_設定アカウント.md「LoggedOutSection」「タップ時の挙動」「状態」
  *
- * ログイン中プロバイダ表示・データ移行状態・ログアウト(LoggedInSection)は本コンポーネントの
- * スコープ外(Issue #96)。ここでは「未ログイン状態のレイアウト」とX/Googleログインボタンの
- * 起動のみを扱う。
+ * ログイン中プロバイダ表示・データ移行状態・ログアウトは`LoggedInSection`
+ * (`src/components/settings/LoggedInSection.tsx`、Issue #96)が扱う。
+ * 本コンポーネントは「未ログイン状態のレイアウト」とX/Googleログインボタンの起動のみを扱う。
  */
 export function LoggedOutSection({ initialLoginFailed = false }: { initialLoginFailed?: boolean }) {
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
