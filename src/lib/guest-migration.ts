@@ -55,6 +55,13 @@ export interface GuestMigrationResult {
   skipped: {
     /** 同梱シードデータに存在しない`seed-`IDを参照していたため移行しなかった件数。 */
     unknown_seed_spot: number;
+    /**
+     * 参照している`shiori_id`が「このユーザーが所有するしおり」ではなかったため
+     * 移行しなかった件数(packing_items/todos/itinerary_entries/shiori_spots合算)。
+     * 通常は発生しない。攻撃者が他人の実UUIDを`shiori[]`に紛れ込ませてIDOR
+     * (他人のしおりへ子データを注入)を試みた場合の防御としてのみ働く。
+     */
+    unauthorized_shiori_id: number;
   };
 }
 
@@ -117,25 +124,65 @@ export async function migrateGuestData(
     counts.spots = spotRows.length;
   }
 
-  if (payload.packing_items.length > 0) {
-    await upsert(admin, "packing_items", payload.packing_items, "id");
-    counts.packing_items = payload.packing_items.length;
+  // --- IDOR対策: 子データが参照する`shiori_id`が、本当にこのユーザーが所有する
+  // しおりかをDB上で確認する。
+  //
+  // 上の`shiori`upsertは`onConflict: "id", ignoreDuplicates: true`のため、
+  // 攻撃者が他人の既存しおりの実UUIDを自分のリクエストの`shiori[]`に含めても、
+  // そのshiori行自体は「既に存在する」として無視されるだけで上書きはされない。
+  // しかしそれだけでは、同じ`shiori_id`を参照する子データ(持ち物・TODO・旅程・
+  // shiori_spots)が所有権チェック無しでそのままINSERTされてしまう
+  // (このAPIはservice_roleで書くためRLSのEXISTSポリシーも効かない)。
+  //
+  // ここでは子データが参照する`shiori_id`一覧をDBへ`user_id = userId`条件付きで
+  // 問い合わせ、「新規にこのユーザーとして挿入した行」「既にこのユーザー所有として
+  // 存在していた行(再送によるリトライを含む)」のいずれでもない`shiori_id`を参照する
+  // 子データは書き込まずスキップする
+  // (全体を失敗させるのではなく、不正/不整合な行だけを除外して残りの移行は継続する。
+  // 参照: `skipped_unknown_seed_spot_count`と同じ「一部除外・継続」方針)。
+  const referencedShioriIds = new Set<string>();
+  for (const row of payload.packing_items) referencedShioriIds.add(row.shiori_id);
+  for (const row of payload.todos) referencedShioriIds.add(row.shiori_id);
+  for (const row of payload.itinerary_entries) referencedShioriIds.add(row.shiori_id);
+  for (const row of payload.shiori_spots) referencedShioriIds.add(row.shiori_id);
+
+  let ownedShioriIds = new Set<string>();
+  if (referencedShioriIds.size > 0) {
+    const { data, error } = await admin
+      .from("shiori")
+      .select("id")
+      .in("id", Array.from(referencedShioriIds))
+      .eq("user_id", userId);
+    if (error) {
+      throw new GuestMigrationStageError("shiori", { code: error.code ?? null, message: error.message });
+    }
+    ownedShioriIds = new Set((data ?? []).map((row) => (row as { id: string }).id));
   }
 
-  if (payload.todos.length > 0) {
-    await upsert(admin, "todos", payload.todos, "id");
-    counts.todos = payload.todos.length;
+  const packingItems = filterOwnedByShiori(payload.packing_items, ownedShioriIds);
+  const todos = filterOwnedByShiori(payload.todos, ownedShioriIds);
+  const itineraryEntries = filterOwnedByShiori(payload.itinerary_entries, ownedShioriIds);
+  const shioriSpots = filterOwnedByShiori(payload.shiori_spots, ownedShioriIds);
+
+  if (packingItems.kept.length > 0) {
+    await upsert(admin, "packing_items", packingItems.kept, "id");
+    counts.packing_items = packingItems.kept.length;
   }
 
-  if (payload.itinerary_entries.length > 0) {
-    await upsert(admin, "itinerary_entries", payload.itinerary_entries, "id");
-    counts.itinerary_entries = payload.itinerary_entries.length;
+  if (todos.kept.length > 0) {
+    await upsert(admin, "todos", todos.kept, "id");
+    counts.todos = todos.kept.length;
   }
 
-  if (payload.shiori_spots.length > 0) {
+  if (itineraryEntries.kept.length > 0) {
+    await upsert(admin, "itinerary_entries", itineraryEntries.kept, "id");
+    counts.itinerary_entries = itineraryEntries.kept.length;
+  }
+
+  if (shioriSpots.kept.length > 0) {
     // シードスポット参照は、上でupsert済みの決定論的UUIDへ付け替えてから書き込む
     // (`spots.id`はuuid型のため`seed-`プレフィックス文字列のままでは書き込めない)。
-    const rows = payload.shiori_spots.map((link) => ({
+    const rows = shioriSpots.kept.map((link) => ({
       shiori_id: link.shiori_id,
       spot_id: link.spot_id.startsWith("seed-") ? seedSpotDbId(link.spot_id) : link.spot_id,
       memo: link.memo,
@@ -145,10 +192,33 @@ export async function migrateGuestData(
     counts.shiori_spots = rows.length;
   }
 
+  const unauthorizedShioriIdCount =
+    packingItems.skippedCount + todos.skippedCount + itineraryEntries.skippedCount + shioriSpots.skippedCount;
+
   return {
     inserted: counts,
-    skipped: { unknown_seed_spot: payload.skipped_unknown_seed_spot_count },
+    skipped: {
+      unknown_seed_spot: payload.skipped_unknown_seed_spot_count,
+      unauthorized_shiori_id: unauthorizedShioriIdCount,
+    },
   };
+}
+
+/** `ownedShioriIds`に含まれない`shiori_id`を参照する行を除外する。 */
+function filterOwnedByShiori<T extends { shiori_id: string }>(
+  rows: T[],
+  ownedShioriIds: Set<string>,
+): { kept: T[]; skippedCount: number } {
+  const kept: T[] = [];
+  let skippedCount = 0;
+  for (const row of rows) {
+    if (ownedShioriIds.has(row.shiori_id)) {
+      kept.push(row);
+    } else {
+      skippedCount += 1;
+    }
+  }
+  return { kept, skippedCount };
 }
 
 async function upsert(

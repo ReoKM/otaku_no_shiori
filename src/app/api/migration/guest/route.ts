@@ -24,8 +24,12 @@ import { GuestMigrationStageError, migrateGuestData } from "@/lib/guest-migratio
  *
  * レスポンス例(成功):
  * ```json
- * {"ok":true,"inserted":{"shiori":1,"spots":0,"packing_items":3,"todos":2,"itinerary_entries":0,"shiori_spots":0},"skipped":{"unknown_seed_spot":0}}
+ * {"ok":true,"inserted":{"shiori":1,"spots":0,"packing_items":3,"todos":2,"itinerary_entries":0,"shiori_spots":0},"skipped":{"unknown_seed_spot":0,"unauthorized_shiori_id":0}}
  * ```
+ *
+ * `skipped.unauthorized_shiori_id`: 子データが参照する`shiori_id`がこのユーザー所有の
+ * しおりとしてDB上に存在しなかったため書き込まなかった件数(通常は0。IDOR対策)。
+ * 参照: `src/lib/guest-migration.ts`のコメント。
  *
  * レスポンス例(失敗・入力検証エラー):
  * ```json
