@@ -50,3 +50,40 @@
   - `tsconfig.json`(`allowImportingTsExtensions`)
   - `supabase/README.md`
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
+
+## 08:20 セッション更新middleware実装(Issue #93)
+
+- Goal: セッション更新middleware(`middleware.ts`)を実装し、ログイン中のSupabaseセッションが自動更新される状態にする
+- 結果: 達成
+- やったこと:
+  - 作業開始時点のセッションブランチ・ワークツリーがorigin/mainより古く(PR #89・#103が未反映)、`git checkout -b feature/issue-93-session-middleware origin/main` で最新mainから作業ブランチを作成
+  - `npm install`(このワークツリーは`node_modules`が未インストールだったため)
+  - `src/lib/supabase/middleware.ts`: `updateSupabaseSession(request)` を実装
+    - `@supabase/ssr`公式パターンに従い、`createServerClient`のcookieアダプタで`request`/`response`双方にcookieを反映
+    - `supabase.auth.getUser()`でセッション検証・リフレッシュ(`getSession()`ではなくAuthサーバーに問い合わせる`getUser()`を使用。公式ドキュメント推奨)
+    - 環境変数未設定・Supabase側の例外はtry/catchで握り、例外を投げず素通し(`NextResponse.next()`)を返す設計にした(ゲスト利用ルートを巻き込まないための多層防御。PR #89の`health.ts`と同じ「例外を握って結果を返す」方針)
+  - `middleware.ts`(リポジトリルート): 全ルートに掛かる薄いエントリーポイント。`config.matcher`で`_next/static`・`_next/image`・`favicon.ico`・`sw.js`・`manifest.webmanifest`・画像拡張子ファイルを除外
+  - `src/lib/supabase/middleware.test.ts`: 5件追加
+    - リフレッシュ発生時に新cookieがレスポンスへ書き込まれる
+    - 未ログイン(ゲスト)時はcookie変更なしで素通し
+    - 環境変数未設定でも例外を投げず素通し
+    - Supabase呼び出しが例外を投げても握って素通し
+    - `createServerClient`へ環境変数のURL・anonキーが正しく渡る
+  - 動作確認:
+    - `npm run lint && npm run typecheck && npm test` すべて成功(テスト379件全通過、うち今回追加5件)
+    - `npm run build` 成功。環境変数未設定のこの環境でも`ƒ Proxy (Middleware)`として認識されることを確認
+  - PR #106を作成(draft、base: main、head: feature/issue-93-session-middleware)
+  - Issue #93にPRリンクをコメント
+- できていないこと:
+  - 実際のSupabaseプロジェクト・OAuthログイン済みブラウザでの動作確認(実セッションでのリフレッシュ確認)。OAuthコールバック自体は別タスクのため、今回はユニットテストで`@supabase/ssr`の振る舞いをモックして担保した
+  - Netlifyプレビューデプロイでの動作確認。PR作成時点では未実施
+- 不明点・仮置き:
+  - Supabase呼び出し失敗時に「例外を投げず素通し」にする設計は自分の判断で追加した(Issue本文に明記は無い)。完了条件「未ログイン時の既存ルートが従来通り動作する」を、ミドルウェア自体の障害時にも壊さない形で満たすための仮置き
+  - `middleware.ts`の`matcher`除外対象(`sw.js`・`manifest.webmanifest`・画像拡張子)は仕様に明記が無いため、Next.js公式サンプル+このリポジトリの`public/`実ファイル構成を見て仮置きした
+  - middlewareのテストは`src/lib/supabase/middleware.test.ts`に置いた(vitestの`include`が`src/**/*.test.ts`のため、リポジトリルート直下の`middleware.ts`には`.test.ts`を直接置けない)。ルートの`middleware.ts`はロジックを持たない薄いラッパーに留めた
+- 成果物:
+  - PR: #106 https://github.com/ReoKM/otaku_no_shiori/pull/106
+  - `middleware.ts`
+  - `src/lib/supabase/middleware.ts`
+  - `src/lib/supabase/middleware.test.ts`
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
