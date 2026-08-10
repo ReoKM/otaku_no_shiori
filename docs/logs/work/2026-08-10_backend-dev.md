@@ -209,3 +209,43 @@
   - `src/lib/supabase/auth-callback.ts` / `auth-callback.test.ts`
   - `src/app/auth/callback/route.ts` / `route.test.ts`
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
+
+## 16:13 ゲストデータ移行: 写真アップロード実装(Issue #98)
+
+- Goal: Issue #98に従い、写真を1枚ずつアップロードするAPI(認証・所有権検証・サイズ/MIMEタイプ検証・photosテーブルINSERT・進捗/再送対応)を実装し、テストを追加してlint/typecheck/testを通し、ブランチをpushする(PR作成はしない)
+- 結果: 達成(コード実装・ユニットテストまで。実データでの疎通確認は未実施)
+- やったこと:
+  - `git checkout main && git pull origin main` → `feature/issue-98-guest-migration-photos` ブランチを作成
+  - 既存実装を調査: `src/lib/guest-migration.ts`/`src/app/api/migration/guest/route.ts`(#97、IDOR対策の設計パターン)、`src/lib/photo-resize.ts`/`photo-validation.ts`(F6の既存写真ロジック)、`src/lib/guest-store.ts`(IndexedDB側`Photo`型・`blob`保持)、`supabase/migrations/0001_initial_schema.sql`・`supabase/README.md`(Storage `photos`バケットの`{user_id}/{shiori_id}/{filename}`規約・2MB/許可MIMEタイプ制限)
+  - 設計判断(仕様に具体例が無いため仮置き。詳細は「不明点・仮置き」):
+    - エンドポイント: `POST /api/migration/photos`(テキスト一括移行`/api/migration/guest`とは別)。**1リクエスト=1枚**とし、フロント側が写真の枚数分呼ぶことで進捗表示・失敗分のみ再送を実現する設計にした
+    - リクエスト形式: `multipart/form-data`(`shiori_id`/`photo_id`/`day_date`/`caption`/`file`)。バイナリを扱うためJSON+base64ではなくmultipartを選んだ
+    - 冪等性: Storageパスに`photo_id`(ゲスト側IndexedDBで発行済みのID)をファイル名として含める(`{user_id}/{shiori_id}/{photo_id}.{拡張子}`)。`storage.upload`は`upsert: true`、`photos`テーブルへの登録も主キー`id`で`upsert(..., { ignoreDuplicates: true })`にすることで、同じ`photo_id`での再送が安全になるようにした(#97と同じ冪等設計パターンを踏襲)
+  - `src/lib/photo-upload-validation.ts`: フォーム入力検証(`shiori_id`/`photo_id`のUUID形式、`day_date`のYYYY-MM-DD形式、`caption`は既存`sanitizeCaption`を再利用、`file`のサイズ2MB以下・MIMEタイプ image/jpeg,image/webp,image/png のいずれかをサーバー側でも検証=クライアント側リサイズ・Storageバケット設定への多層防御)
+  - `src/lib/guest-photo-migration.ts`: アップロード本体(`migrateGuestPhoto`)
+    - **IDOR対策**: アップロード前に必ず`admin.from("shiori").select("id").eq("id", shiori_id).eq("user_id", userId).maybeSingle()`で所有権をDB上で確認してから書き込む(#97のPR #108で見つかったIDOR脆弱性=service_role接続はRLSを無視するため子データの所有権チェックが必須、という教訓をそのまま踏襲。「存在しない」と「他人所有」を区別する情報は返さない)
+    - 所有権確認 → Storageアップロード(`upsert:true`) → `photos`テーブルupsert(`ignoreDuplicates:true`)の順で実行し、失敗した段階を`PhotoMigrationError.reason`(`shiori_not_owned`/`storage_upload_failed`/`db_insert_failed`)で識別できるようにした
+  - `src/app/api/migration/photos/route.ts`: `POST /api/migration/photos`。未ログイン401/フォーム解析失敗・入力検証エラー400/所有権なし404(IDOR拒否)/Storage・DB書き込み失敗502/クライアント生成失敗503。テキスト移行route.tsと同じ「Cookieセッションで認証→admin clientで書き込み」パターン
+  - テスト30件追加:
+    - `src/lib/photo-upload-validation.test.ts`(13件): 正常系、必須項目欠如、UUID形式不正、day_date形式不正、サイズ超過(2MB超/ちょうど2MB境界)、許可MIMEタイプ全種類、不許可MIMEタイプ、空ファイル、caption空白trimなど
+    - `src/lib/guest-photo-migration.test.ts`(7件): 成功時の呼び出し順序・引数、IDOR拒否(所有権なし/DBクエリ自体の失敗)、Storageアップロード失敗、DB upsert失敗、冪等性(同じphoto_idで同じstorage_pathになる)
+    - `src/app/api/migration/photos/route.test.ts`(10件): 未ログイン401、入力検証400(必須欠如/サイズ超過/MIMEタイプ不正)、**他人のshiori_idへのアップロード試行=404で拒否(IDOR)**、成功200、Storage/DB失敗502、同一photo_idの再送が成功として扱えること
+  - `supabase/README.md`更新: 「実装済み: ゲスト→クラウド移行(写真バイナリ、#98)」セクションを新設し、「まだ実装していないもの」から写真バイナリ移行の項目を削除
+  - `npm run lint && npm run typecheck && npm test`すべて成功(45ファイル471件全通過、lintエラー・警告なし)
+  - コミットして`feature/issue-98-guest-migration-photos`ブランチをpush(このセッションではPRを作成しない。呼び出し元セッションがPRを作成する指示のため)
+- できていないこと:
+  - 実データでの疎通確認(実Supabaseプロジェクトへの実アップロード・INSERT)は未実施。この作業環境に実Supabaseの鍵が無いため実施不可。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する必要がある
+  - フロント側の呼び出し・移行フロー結線(#99、テキスト移行→写真移行→IndexedDB側の「移行済み」フラグ付与の一連の流れ)は対象外(frontend-dev担当)
+  - 実Storageクライアント(`@supabase/supabase-js`の`storage.from().upload()`)の型・実際の挙動(エラー形状等)はモックでの検証のみ。実クライアントとの型不一致がないかはNetlifyプレビューでの疎通確認時に要確認
+- 不明点・仮置き:
+  - エンドポイント名`POST /api/migration/photos`・「1リクエスト=1枚」「multipart/form-data」というリクエスト形状は仕様(docs/03_tech_stack.md)に具体例が無いため仮置き。フロント実装(#99)と合わせる必要がある
+  - 所有権チェック失敗時のHTTPステータスを404(「存在しない」と「他人所有」を区別しないIDOR安全な設計)に仮置きした。#97のテキスト移行では「エラーにせずスキップして移行は継続」する設計だったが、写真は1リクエスト=1枚のためリクエスト単位で明確に失敗を返す方が呼び出し側(進捗表示・再送UI)にとって扱いやすいと判断し、今回は明示的な拒否レスポンスにした(#97とは異なる設計判断であることを明記)
+  - `photo_id`をStorageのファイル名にそのまま使う設計(拡張子のみMIMEタイプから導出)は独自設計。仕様は「返ってきた`storage_path`を対応する`photos`レコードに紐付けて登録する」という記載のみで、ファイル名の決め方は指定が無い
+  - `caption`の未指定時は`null`扱い(フォームフィールド自体を省略可能とした)。仕様に明記は無いが、既存の`sanitizeCaption`(空文字→null)と一貫させた
+- 成果物:
+  - ブランチ: `feature/issue-98-guest-migration-photos`(push済み。PR未作成)
+  - `src/app/api/migration/photos/route.ts` / `route.test.ts`(新規)
+  - `src/lib/photo-upload-validation.ts` / `photo-upload-validation.test.ts`(新規)
+  - `src/lib/guest-photo-migration.ts` / `guest-photo-migration.test.ts`(新規)
+  - `supabase/README.md`(更新)
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
