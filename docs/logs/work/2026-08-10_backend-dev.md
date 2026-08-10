@@ -82,3 +82,30 @@
   - `src/app/auth/callback/route.ts` / `route.test.ts`
   - `supabase/README.md`
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
+
+## 18:20 PR #107 code-reviewer指摘の修正(isSafeRedirectPathのバックスラッシュ経由オープンリダイレクト)
+
+- Goal: PR #107（`feature/issue-94-oauth-callback`）の `isSafeRedirectPath` にあるバックスラッシュ経由のオープンリダイレクト脆弱性を、`new URL(path, origin).origin` 比較方式で根本修正し、テストを追加した上で既存PRに追加コミット・pushする
+- 結果: 達成
+- やったこと:
+  - 共有の作業ディレクトリで別セッションがブランチを切り替えていたため、`git worktree add` で `feature/issue-94-oauth-callback` 専用のworktreeを作り、そちらで作業した(既存セッションの作業を壊さないため)
+  - `src/lib/supabase/auth-callback.ts` の `isSafeRedirectPath` を修正
+    - 旧実装: `startsWith("/")` → `startsWith("//")` → `includes("://")` の個別パターンを後追いでブロックする方式。`next=/\evil.example` はこの3チェックすべてを回避したうえで、`new URL(path, origin)`(`buildRedirectUrl`/`buildAuthErrorRedirectUrl`内)がWHATWG URL仕様の特別スキームの挙動(バックスラッシュ→スラッシュ正規化)により `https://evil.example/` に解決されてしまう脆弱性があった
+    - 新実装: `isSafeRedirectPath(path, origin)` に変更。実際のリダイレクトと同じ `new URL(path, origin)` を判定側でも解決し、結果の `origin` が期待する自サイトの `origin` と一致するかで判定する方式にした。個別パターンの後追いではなく、`new URL`が外部originへ解決する経路を一括して閉じる
+    - `resolveRedirectPath` にも `origin` 引数を追加し、呼び出し元(`src/app/auth/callback/route.ts`)から `url.origin` を渡すよう変更
+  - テスト追加・修正(`src/lib/supabase/auth-callback.test.ts`)
+    - バックスラッシュ経由3パターン(`/\evil.example` 等)を拒否することを確認するテストを追加
+    - `resolveRedirectPath` のバックスラッシュ経由フォールバックのテストを追加
+    - 旧実装で「スキームを含む値は拒否する」としていたテスト(`/redirect?to=javascript://evil`)を見直した。この値は同一origin内のパスであり、`new URL`解決後もoriginが変わらない(=実際には開いても自サイトから離れない)ため、origin比較方式では許可が正しい挙動。誤検知が起きないことを確認するテストに書き換えた
+  - `src/app/auth/callback/route.test.ts` に結線テストを追加(`next=%2F%5Cevil.example` でホームへフォールバックすることを確認。code-reviewer指摘の再発防止)
+  - `npm ci` でworktreeに依存関係を導入し、`npm run lint && npm run typecheck && npm test` を実行(いずれも成功。テスト400件全通過)
+  - コミット `e8bacf2` を作成し `git push origin feature/issue-94-oauth-callback`(PR #107の既存ブランチへ追加コミット。新規PRは作成していない)
+  - PR #107にコメントで修正内容・テスト内容・確認結果・完了報告を投稿(comment id 5238190525)
+- できていないこと: なし
+- 不明点・仮置き:
+  - 旧実装の「スキームを含む値は拒否する」テストケース(`/redirect?to=javascript://evil`)の期待値を「許可」に変更した。これは個別パターンチェックが本来のセキュリティ要件(自サイト外へリダイレクトさせない)より過剰にブロックしていたための整理であり、レビュー指摘の範囲を超える判断のため、この対応方針に問題があればcode-reviewer/PMに再確認してほしい
+- 成果物:
+  - PR: #107 https://github.com/ReoKM/otaku_no_shiori/pull/107(追加コミット `e8bacf2`)
+  - `src/lib/supabase/auth-callback.ts` / `auth-callback.test.ts`
+  - `src/app/auth/callback/route.ts` / `route.test.ts`
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
