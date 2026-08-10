@@ -82,3 +82,35 @@
     - `src/lib/supabase/auth-provider.test.ts`(新規)
     - `src/lib/supabase/sign-out.ts`(新規)
     - `src/lib/supabase/sign-out.test.ts`(新規)
+
+## 16:50 Issue #100: しおり保存後のログイン促しバナー実装
+
+- Goal: `docs/01_service_spec.md` F8の「しおり保存後のバナー表示」を実装し、未ログインユーザーがしおり作成直後にログイン導線(`/settings`)を1回だけ見られるようにする(ログイン済み・再訪問・閉じた後は再表示しない)
+- 結果: 達成
+- やったこと:
+  - `docs/01_service_spec.md` F8、`docs/design/screens/S2_しおり作成.md`・`S3_しおり詳細.md`・`S5_共有画像プレビュー.md`・`S6_設定アカウント.md`を確認。F8のバナー表示位置がS3(しおり詳細シェル)向けの画面仕様として明文化されていないことを確認(S5の`LoginHint`は共有画像側でPhase 2送りのため対象外)
+  - `main`を最新化してから`feature/issue-100-login-banner`ブランチを作成
+  - `src/lib/login-prompt-banner.ts`を新規実装: `markShioriJustCreated`(S2の作成成功時にsessionStorageへ「保存直後」印を残す)/`consumeShioriJustCreated`(S3側が一度だけ読み取り即座に消費する。再訪問時はfalse)/`isLoginPromptBannerDismissed`・`dismissLoginPromptBannerForever`(localStorageで永続的に「閉じた」を記録)。`src/lib/todo-template-seed.ts`・`src/lib/list-sort-mode.ts`と同じ「window有無・storage例外を握りつぶす」パターンを踏襲。テスト12件
+  - `src/components/shiori-detail/LoginPromptBanner.tsx`を新規実装: 上記libで「保存直後」かつ「未クローズ」の場合のみ、Supabaseセッション(`getSupabaseBrowserClient().auth.getSession()`)を確認して未ログインなら表示。文言はS5`LoginHint`で既承認の「ログインすると、しおりを他の端末からも見られるようになります」を流用し、`/settings`への「ログインする」リンクと閉じるボタン(押すと`dismissLoginPromptBannerForever`)を追加。`docs/design/tokens.md`のトークン(`bg-sakura-soft`/`border-paper-border`/`rounded-xl`/`text-ink-sub`/`text-sakura-ink`等)のみ使用
+  - `src/components/shiori-form/ShioriCreateForm.tsx`: 作成成功時に`markShioriJustCreated(created.id)`を追加(`/shiori/[id]/packing`への`router.push`直前)
+  - `src/app/shiori/[id]/layout.tsx`(S3タブシェル): `state === "ready"`のときのみ`<LoginPromptBanner shioriId={shioriId} />`をタブバー直下に描画するよう追加
+  - `npm run lint`(React Compilerの「effect内で直接setStateしない」エラーを`queueMicrotask`で解消)・`npm run typecheck`・`npm test`を実行し全て成功
+  - 作業中、この作業ディレクトリがIssue #96実装セッションとgit作業ディレクトリ(HEAD)を共有していることが判明(相手セッションが`git checkout`したタイミングで、私の未コミット変更ごと`feature/issue-96-logged-in-section`ブランチに乗ってしまっていた)。相手のコミット・push(`672c5eb`)には手を触れず、`git checkout feature/issue-100-login-banner`で自分のブランチへ戻したところ、追跡ファイルの変更(`layout.tsx`・`ShioriCreateForm.tsx`)と未追跡ファイル(新規3ファイル)はすべてそのまま引き継がれ、実害無く復旧した
+  - このログファイル(`docs/logs/work/2026-08-10_frontend-dev.md`)も同じ理由で、Issue #96セッションが追記した内容(一時未コミット→その後`128b740`として`feature/issue-96-logged-in-section`側にコミット)が作業ツリー上に混在した。最終的には`main`時点のファイル内容(Issue #95の16:20エントリまで)を土台に、自分の16:50エントリのみを追記する形へ組み直してコミットした(Issue #96側のエントリは含めない。あちらのブランチのコミット`128b740`に既に含まれているため、二重管理を避けた)
+- できていないこと:
+  - 実ブラウザでの目視確認(しおり作成→バナー表示→「ログインする」タップで`/settings`へ遷移→閉じるボタンで再訪問時に非表示、の一連の操作)は、この環境に対話的なブラウザ操作の手段が無いため未実施。Netlifyプレビューデプロイ上でQA/オーナーが確認する前提
+  - コンポーネント自体(`LoginPromptBanner.tsx`)のDOM描画テストは追加していない。このリポジトリにReact Testing Library/jsdomが導入されておらず(`vitest.config.ts`が`environment: "node"`、`include`が`.test.ts`のみ)、既存コンポーネント(`GuestNotice`・`LoginErrorNotice`等)も同様に無テストのため、既存方針を踏襲し表示制御ロジック(`login-prompt-banner.ts`)側でユニットテストした
+  - Supabaseの実セッション確認(`auth.getSession()`)を使ったログイン済み判定自体の結合テストは未実施(環境変数未設定のローカル実行では`MissingSupabaseEnvError`が発生し、その場合もゲスト扱いでバナーを表示するようtry/catchで担保しているが、実際にSupabaseへ接続できる環境での動作確認はしていない)
+- 不明点・仮置き:
+  - F8の「しおり保存後のバナー表示」に対応する画面仕様(S3側の専用ドキュメント記載)が無いため、表示位置・表示条件・文言はすべて仮置き。具体的には: (1) 表示位置は「S2作成成功→S3(`/shiori/[id]/packing`)へ遷移した直後」とし、S3タブシェル(`layout.tsx`)のタブバー直下に配置した (2) 表示は「保存直後の初回のみ」とし、sessionStorageの一度きりのフラグで実現(再訪問・リロードでは出ない) (3) 「バナーを閉じた場合は再表示しない」をアプリ全体・永続(localStorage)で解釈し、しおり単位ではなく一度閉じたら以後どのしおりでも出さない設計にした(仕様の「しつこくしない」を優先) (4) 文言はS3向けの記載が無いため、S5`LoginHint`で既に承認されている文言をそのまま流用した(新規の文言を勝手に作らないため)
+  - ログイン済み判定は`supabase.auth.getSession()`を採用した(`src/lib/supabase/middleware.ts`は検証済み判定のため`getUser()`を使うが、本バナーは非同期のUI表示切り替えに過ぎずセキュリティ境界ではないこと、オフライン時にも判定を試みたいことから、ネットワーク往復が必須ではない`getSession()`を選んだ)
+  - 環境変数未設定・Supabase接続失敗時は「未ログイン(ゲスト)」扱いでバナーを表示する仮置きにした(ゲスト利用者が大多数の前提のUXを優先。`src/lib/supabase/middleware.ts`の「巻き込んで壊さない」方針と同じ考え方)
+  - 作業環境がIssue #96実装セッションとgit作業ディレクトリを共有していたため、一時的にコミットが混線しかけた(詳細は「やったこと」参照)。`git checkout`で復旧済みで実害無し(相手の未コミット変更・ブランチ履歴は変更していない)だが、環境側の問題として申し送りする。あわせて、このログファイル自体も同じ理由で複数セッションの追記が同一ファイルに乗っており、両PRのマージ順序によってはコンフリクトが起き得る点も申し送りする
+- 成果物:
+  - ブランチ: `feature/issue-100-login-banner`(`main`のコミット`7a0cbaa`から分岐)
+  - 変更ファイル一覧:
+    - `src/lib/login-prompt-banner.ts`(新規)
+    - `src/lib/login-prompt-banner.test.ts`(新規)
+    - `src/components/shiori-detail/LoginPromptBanner.tsx`(新規)
+    - `src/components/shiori-form/ShioriCreateForm.tsx`(`markShioriJustCreated`呼び出しを追加)
+    - `src/app/shiori/[id]/layout.tsx`(`LoginPromptBanner`の描画を追加)

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { buildColorCover, buildEmojiCover, DEFAULT_COVER } from "@/lib/cover";
 import { COVER_COLOR_PRESETS, COVER_EMOJI_PRESETS } from "@/lib/cover-presets";
 import { createShiori } from "@/lib/guest-store";
+import { markShioriJustCreated } from "@/lib/login-prompt-banner";
 import {
   firstShioriFormErrorField,
   hasShioriFormErrors,
@@ -80,6 +81,9 @@ export function ShioriCreateForm() {
         purpose: purpose.trim() || null,
         cover: resolveCover(),
       });
+      // F8「しおり保存後のバナー表示」用の印。src/components/shiori-detail/LoginPromptBanner.tsx が
+      // 遷移先(S3)で一度だけ読み取って消費する。参照: docs/01_service_spec.md F8
+      markShioriJustCreated(created.id);
       router.push(`/shiori/${created.id}/packing`);
     } catch {
       setSubmitting(false);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
+import { LoginPromptBanner } from "@/components/shiori-detail/LoginPromptBanner";
 import { ShioriDetailHeader } from "@/components/shiori-detail/ShioriDetailHeader";
 import { TabBar, type ShioriTabId } from "@/components/shiori-detail/TabBar";
 import { FEATURE_SHARE } from "@/lib/feature-flags";
@@ -104,6 +105,9 @@ export default function ShioriDetailLayout({ children }: { children: React.React
         />
         <TabBar shioriId={shioriId} activeTab={activeTab} disabled={state === "loading"} />
       </div>
+      {/* F8: しおり保存後のバナー表示。しおり作成直後にこの画面へ遷移してきた場合のみ、
+          未ログインなら一度だけ表示する(src/lib/login-prompt-banner.ts参照)。 */}
+      {state === "ready" && <LoginPromptBanner shioriId={shioriId} />}
       <div className="flex flex-1 flex-col">
         {state === "not-found" ? (
           <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
