@@ -41,6 +41,48 @@
     - `src/lib/supabase/oauth-login.ts`
     - `src/lib/supabase/oauth-login.test.ts`
 
+## 16:50 S6画面: ログイン後表示の実装(ログアウト・データ移行状態・規約リンク)
+
+- Goal: Issue #96に従い、S6画面のログイン後表示(LoggedInSection)を実装し、認証状態に応じてLoggedIn/LoggedOutを出し分けるロジックとテストを追加してmainからのブランチにpushする
+- 結果: 達成
+- やったこと:
+  - `docs/design/screens/S6_設定アカウント.md`の「LoggedInSection」節・「状態」表・「文言一覧」を精読し、既存の`SettingsRoute.tsx`/`LoggedOutSection.tsx`(Issue #95実装済み)のパターン(ロジックをlibに切り出してユニットテストする方針、`docs/design/tokens.md`のトークン運用)を踏襲する方針を確認
+  - `main`を最新化(`origin/main`に7コミット分の差分あり、fast-forward)してから`feature/issue-96-logged-in-section`ブランチを作成
+  - `src/lib/supabase/auth-provider.ts`を新規実装: `resolveOAuthProvider(user)`(Supabaseの`User.app_metadata.provider`から`"twitter"|"google"|null`を判定)、`getProviderLoginLabel(provider)`(「Xでログイン中」/「Googleでログイン中」)。テスト5件+2件
+  - `src/lib/supabase/sign-out.ts`を新規実装: `signOut(supabase)`(`auth.signOut()`を呼び、例外も握って`{ok:false}`を返す。`oauth-login.ts`の`signInWithProvider`と同じ設計)。テスト3件(成功時に`signOut`が1回呼ばれる・Supabaseエラー時・例外時)
+  - `src/lib/migration-status.ts`を新規実装: `MigrationStatus`型(`in_progress`/`completed`/`partial_failure`)、`formatMigrationProgressLabel(migrated, total)`(「しおりを移行しています…(3/5件)」の文言組み立て)、`calculateMigrationProgressPercent(migrated, total)`(0除算ガード付き進捗率計算)。テスト5件
+  - `src/components/settings/AccountStatusRow.tsx`(見出し「アカウント」+ログイン中プロバイダ文言。プロバイダ不明時は見出しのみの防御的表示)、`MigrationStatusCard.tsx`(`status`が`null`ならカードごと非表示。`in_progress`/`completed`/`partial_failure`の3状態をデザイン仕様どおりに実装、進捗バーは`PackingProgressCard`と同仕様、再試行ボタンは`src/app/page.tsx`の「再読み込み」ボタンと同仕様)、`LogoutButton.tsx`(`signOut`呼び出し+「ログアウトしています…」ローディング表示、確認ダイアログ無し)、`LoggedInSection.tsx`(上記3つを仕様どおりの順で並べる。`MigrationStatusCard`には現時点で`status={null}`を渡し、Issue #99が実データ配線を追加する前提であることをコード内コメントに明記)を実装
+  - `SettingsRoute.tsx`を更新: `authState`(`loading`/`loggedOut`/`loggedIn`)を追加し、マウント時`supabase.auth.getUser()`で初回判定、`onAuthStateChange`購読でログアウト後の表示切り替えに追従。`loggedIn`時は`resolveOAuthProvider`でプロバイダを判定して`LoggedInSection`へ渡す
+  - `LoggedOutSection.tsx`のコメントを、`LoggedInSection`実装済みの状態に合わせて更新(内容変更なし)
+  - `npm run lint && npm run typecheck && npm test`を実行し全て成功(50ファイル512件のテストが全通過。既存47ファイルから今回3ファイル追加)
+  - コミット後、この作業ディレクトリが別セッション(Issue #100 ログイン促しバナー実装)とgit作業ディレクトリ(HEAD)を共有していることが判明。コミットが一時的に他セッションの`feature/issue-100-login-banner`ブランチの上に乗ってしまっていたため、`git branch -f`で自分のコミットを正しい`feature/issue-96-logged-in-section`ブランチへ付け替え、`feature/issue-100-login-banner`は誤コミット追加前の状態(`origin/main`と同じ`7a0cbaa`)に復旧。他セッションの未コミット変更(`src/app/shiori/[id]/layout.tsx`・`src/components/shiori-form/ShioriCreateForm.tsx`の変更、`src/lib/login-prompt-banner.ts`等の新規ファイル)には一切触れていない
+  - `feature/issue-96-logged-in-section`をoriginへpush
+- できていないこと:
+  - 実際のログイン状態(実プロバイダでのOAuthログイン→`/settings`でLoggedInSectionが表示されること)のブラウザでの対話的な確認は、この環境に対話的なOAuth操作を行う手段が無いため未実施。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する前提(Issue #95実装時と同じ制約)
+  - コンポーネントのDOMレンダリングテスト(ログアウトボタン押下でのUI変化、リンクのhref直接検証等)は追加していない。このリポジトリにReact Testing Library/jsdomが導入されておらず(`vitest.config.ts`は`environment: "node"`、component .tsxのテストファイルは既存でも1件も無い)、既存実装(`oauth-login.test.ts`等)も「ロジックをUIから切り出してユニットテストする」方針のため、本PRもそれを踏襲し`signOut`・`resolveOAuthProvider`・`getProviderLoginLabel`・移行状態の文言整形ロジックをテストした
+  - データ移行状態(`MigrationStatusCard`)の実データ連携(移行中/完了/一部失敗の実際の判定・再試行の実処理)はIssue #99のスコープのため未実装。本PRでは`status={null}`のプレースホルダで常に非表示にしている(Issueの完了条件に明記された許容範囲)
+- 不明点・仮置き:
+  - ログイン状態判定中(`authState: "loading"`)の表示は、仕様書に明記が無いため「LoggedIn/LoggedOutのどちらも表示しない(誤った状態が一瞬見えるフラッシュを避ける)」という実装判断にした
+  - ログアウト失敗時のエラー表示は仕様に記載が無いため実装していない(ローディング状態だけは`finally`で解除し、再度ボタンを押せる状態に戻す)
+  - `MigrationStatusCard`の`status`の型・`onRetry`コールバックの形は仕様書に「データ構造は未定、実装時にすり合わせ」と明記されていたため、`docs/03_tech_stack.md`の移行手順(テキスト一括→写真1枚ずつ)を1つの状態としてまとめる設計で仮に定義した(`src/lib/migration-status.ts`)。Issue #99側で実データの形と合わない場合は型の調整が必要な可能性がある
+  - 作業環境がIssue #100実装セッションとgit作業ディレクトリを共有していたため、一時的にコミットが混線した(詳細は「やったこと」参照)。`git branch -f`で復旧済みで実害無し(他セッションの未コミット変更・ブランチ履歴は変更していない)だが、環境側の問題として申し送りする
+- 成果物:
+  - ブランチ: `feature/issue-96-logged-in-section`(origin にpush済み、PR未作成。オーケストレーター側でPR作成予定)
+  - コミット: `672c5eb feat: S6ログイン後表示(LoggedInSection)を実装`
+  - 変更ファイル一覧:
+    - `src/components/settings/AccountStatusRow.tsx`(新規)
+    - `src/components/settings/LoggedInSection.tsx`(新規)
+    - `src/components/settings/LogoutButton.tsx`(新規)
+    - `src/components/settings/MigrationStatusCard.tsx`(新規)
+    - `src/components/settings/LoggedOutSection.tsx`(コメント更新のみ)
+    - `src/components/settings/SettingsRoute.tsx`(認証状態判定・出し分けロジック追加)
+    - `src/lib/migration-status.ts`(新規)
+    - `src/lib/migration-status.test.ts`(新規)
+    - `src/lib/supabase/auth-provider.ts`(新規)
+    - `src/lib/supabase/auth-provider.test.ts`(新規)
+    - `src/lib/supabase/sign-out.ts`(新規)
+    - `src/lib/supabase/sign-out.test.ts`(新規)
+
 ## 16:50 Issue #100: しおり保存後のログイン促しバナー実装
 
 - Goal: `docs/01_service_spec.md` F8の「しおり保存後のバナー表示」を実装し、未ログインユーザーがしおり作成直後にログイン導線(`/settings`)を1回だけ見られるようにする(ログイン済み・再訪問・閉じた後は再表示しない)
