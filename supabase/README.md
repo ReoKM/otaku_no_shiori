@@ -93,8 +93,24 @@ $ curl -s localhost:3000/api/health/supabase
 
 ## まだ実装していないもの(次タスク以降)
 
-- API Route(しおり作成等)。バックエンドAPIは各機能実装タスクで追加
-- セッション更新middleware(F8。トークンの自動リフレッシュ。W3スコープ)
-- ログインボタン等のUI(F8。frontend-dev担当)
-- ゲスト→ログインのデータ移行処理(F8。W3スコープ)
+- API Route(しおり作成等、ログイン後の通常CRUD)。バックエンドAPIは各機能実装タスクで追加
+- 写真バイナリの移行(Supabase Storageへの1枚ずつアップロード。#98)
+- ログインボタン等のUI(F8。frontend-dev担当。#95)
+- ゲスト→ログインのデータ移行フロー結線(ログイン成功時に移行APIを呼ぶ処理。#99)
 - DBスキーマからの型生成(`supabase gen types`)。テーブルを実際に読み書きするAPI実装時に導入を検討
+
+## 実装済み: ゲスト→ログインのデータ移行(テキストのみ、#97)
+
+`POST /api/migration/guest`(仮置きのエンドポイント名)で、しおり/持ち物/TODO/旅程/行きたいスポットの
+テキストデータを一括INSERTする。片道の移行専用で、ログイン後の一般CRUD APIではない。
+
+- 認証はCookieセッション(`server.ts`)で確定させたユーザーIDのみを使う(リクエストボディの`user_id`は無視)
+- 書き込みは`admin.ts`(`service_role`)。各テーブルへ主キーで`upsert`(`ignoreDuplicates: true`)するため、
+  部分失敗後に同じペイロードを再送しても安全(冪等)
+- `shiori_spots`がシードスポット(`seed-`ID)を参照する場合、`seedSpotDbId()`で決定論的UUIDへ変換し、
+  `spots`テーブルへ`source='seed', status='public'`として(共有行として)upsertしてから紐付ける
+  (参照: docs/design/screens/S4_スポット検索.md「参照整合性の注記」)
+- 実装: `src/app/api/migration/guest/route.ts` / `src/lib/guest-migration.ts` /
+  `src/lib/guest-migration-validation.ts` / `src/lib/seed-spot-db-id.ts`
+- **実データでの疎通確認は未実施**(この開発環境に実Supabaseプロジェクトの鍵が無いため)。
+  Netlifyプレビューデプロイ上でQA/オーナーが手動確認する

@@ -88,6 +88,69 @@
   - `src/lib/supabase/middleware.test.ts`
 - 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
 
+## 16:25 ゲスト→クラウド移行API実装(テキストデータ一括INSERT)
+
+- Goal: ゲスト→クラウドのテキストデータ一括移行API(しおり+持ち物+TODO+旅程+スポットの一括INSERT、片道)を実装し、PRがマージ可能な状態になる
+- 結果: 達成(コード実装・ユニットテストまで。実データでの疎通確認は未実施)
+- やったこと:
+  - Issue #97、Issue #97コメント(ウェーブ1実行計画)、docs/03_tech_stack.md「ゲスト→ログインのデータ移行」を確認
+  - 作業開始前に、このworktreeのブランチが`origin/main`より古いこと(PR #89等が未反映)に気づき、`origin/main`から`feature/issue-97-guest-migration-api-text`ブランチを作成し直した
+  - 既存実装を調査: `src/lib/supabase/admin.ts`(PR #89、`service_role`用)、`src/types/shiori.ts`、`src/lib/guest-store.ts`(IndexedDB)、既存の各画面バリデーション定数(S2/S3a/S3b/S3c)、`supabase/migrations/0001_initial_schema.sql`
+  - 調査で見つけた設計上の論点への対応:
+    - `docs/design/screens/S4_スポット検索.md`に「W3のF8移行時、シードスポット(`seed-`ID)を参照する`shiori_spots`より先に、シードスポットをサーバーの`spots`テーブルへ投入しIDをマッピングする処理が必要」と明記されていたのを確認し、対応した(`src/lib/seed-spot-db-id.ts`: UUID v5による決定論的ID変換。`spots`へ`source='seed', status='public'`の共有行としてupsert)
+    - `budget_total`/`budget_memo`/`budget_items`(`src/types/shiori.ts`/`guest-store.ts`には存在するがDBスキーマ未対応、コード内コメントで「F番号未採番・オーナー草案」と明記)は移行対象外として明示的に除外(スキーマ変更は本タスクの対象外と判断し、独断で追加しなかった)
+  - `src/lib/guest-migration-validation.ts`: 入力検証(型・必須・文字数上限・親子の参照整合性・配列件数上限)。文字数上限は既存フォームの上限定数(`SHIORI_TITLE_MAX_LENGTH`等)をそのまま再利用
+  - `src/lib/guest-migration.ts`: 一括INSERT本体。`shiori`→`spots`(UGC+シード)→`packing_items`/`todos`/`itinerary_entries`→`shiori_spots`の順で、各テーブルへ主キーの`upsert(ignoreDuplicates: true)`。部分失敗後に同じペイロードを再送しても安全(冪等)。失敗ステージを`GuestMigrationStageError`で識別
+  - `src/app/api/migration/guest/route.ts`: `POST /api/migration/guest`(仮置きのエンドポイント名)。Cookieセッションで認証したユーザーIDのみを使用(ボディの`user_id`は無視)。未ログイン401/JSON解析失敗・検証エラー400/書き込み失敗502/クライアント生成失敗503
+  - テスト33件追加: `seed-spot-db-id.test.ts`(3件)/`guest-migration-validation.test.ts`(22件)/`guest-migration.test.ts`(6件)/`route.test.ts`(5件)。実Supabaseへは接続せず、フェイクの`SupabaseClient`で検証
+  - `supabase/README.md`更新: 実装済み/未実装リストを更新
+  - `npm run lint && npm run typecheck && npm test`すべて成功(407件全通過、lintエラー・警告なし)
+  - `feature/issue-97-guest-migration-api-text`ブランチをpush、PR #108(draft)を作成、Issue #97へPRリンクをコメント
+- できていないこと:
+  - 実データでの疎通確認(実際のSupabaseプロジェクトへのINSERT)は未実施。この作業環境に実Supabaseの鍵が無いため実施不可。Netlifyプレビューデプロイ上でQA/オーナーが手動確認する必要がある
+    - 方針の食い違い: Issue #97のコメント(ウェーブ1実行計画)では「Issue #90クローズ済みのため実データ疎通確認を完了条件に含めてよい」とあったが、本タスクの実行指示ではこのセッションの作業環境自体に実キーが無いことが明示されており、実施できなかった。PR本文にも明記した
+  - `budget_total`/`budget_memo`/`budget_items`の移行は未対応(DBスキーマ未対応のため。別Issue要)
+  - 写真バイナリの移行(#98)、フロント側の呼び出し・移行フロー結線(#99)は対象外
+- 不明点・仮置き:
+  - エンドポイント名`POST /api/migration/guest`・リクエスト/レスポンス形状は仕様に具体例が無いため仮置き(PR本文に明記)
+  - 冪等性のための`upsert(ignoreDuplicates: true)`設計は独自判断(仕様は「衝突は考えない」「移行失敗時はリトライ可能に」の記載のみ)
+  - シードスポットのDB投入方式(UUID v5決定論的変換)は独自設計(仕様は「IDをマッピングする処理が必要」の記載のみで具体的手段の指定なし)
+  - `spots.description`/`category`/`area`・`shiori_spots.memo`の文字数上限、1リクエストあたりの配列件数上限は仕様に明記が無いため仮置き
+  - PRの行数(約1570行)がCLAUDE.mdの目安(400行以内)を超過。1機能として密結合なため分割せず1PRとした
+- 成果物:
+  - PR #108 https://github.com/ReoKM/otaku_no_shiori/pull/108
+  - `src/app/api/migration/guest/route.ts` / `route.test.ts`
+  - `src/lib/guest-migration-validation.ts` / `guest-migration-validation.test.ts`
+  - `src/lib/guest-migration.ts` / `guest-migration.test.ts`
+  - `src/lib/seed-spot-db-id.ts` / `seed-spot-db-id.test.ts`
+  - `supabase/README.md`(更新)
+
+## 09:20 PR #108のcode-reviewer必須指摘(IDOR)修正
+
+- Goal: PR #108(`feature/issue-97-guest-migration-api-text`、Issue #97)へのcode-reviewer差し戻し(子データのIDOR脆弱性)を修正し、既存PRに追加コミットしてpushする
+- 結果: 達成
+- やったこと:
+  - `git fetch origin feature/issue-97-guest-migration-api-text && git checkout feature/issue-97-guest-migration-api-text`
+  - 指摘内容を再確認: `src/lib/guest-migration.ts`(`migrateGuestData`)で`packing_items`/`todos`/`itinerary_entries`/`shiori_spots`のupsert前に、参照する`shiori_id`のDB上の実所有者を検証していなかった。`shiori`upsertは`onConflict: "id", ignoreDuplicates: true`のため、攻撃者が他人の既存しおりの実UUIDを自分のリクエストの`shiori[]`に含めても、そのshiori行自体は無視されるだけで、同じshiori_idを参照する子データはservice_role経由で所有権チェック無しにそのままINSERTされてしまうIDOR
+  - `migrateGuestData`に対応を追加:
+    - `packing_items`/`todos`/`itinerary_entries`/`shiori_spots`が参照する`shiori_id`一覧を収集し、`admin.from("shiori").select("id").in("id", ids).eq("user_id", userId)`でDB上の実所有者を確認
+    - 「今回このユーザーとして新規挿入した行」または「既にこのユーザー所有として存在していた行(再送リトライを含む)」のいずれでもない`shiori_id`を参照する子データはINSERTせずスキップ(拒否ではなくスキップ。既存の`unknown_seed_spot`と同じ「一部除外・継続」方針に揃えた)
+    - スキップ件数を`GuestMigrationResult.skipped.unauthorized_shiori_id`として新規に返すようにした(通常は0)
+    - 子データが1件も無い場合は所有権確認クエリ自体を呼ばない(無駄なDB往復を増やさない)
+  - `src/app/api/migration/guest/route.ts`のJSDocレスポンス例を新フィールドに合わせて更新
+  - `src/lib/guest-migration.test.ts`: フェイクadminクライアントに`shiori`テーブルの`select().in().eq()`チェーンのモックを追加(デフォルトは全id所有扱いで既存テストの挙動を変えない設計)。IDORシナリオのテスト3件を追加(所有権が確認できないshiori_idを参照する子データが1件もupsertされないこと/所有権が確認できる場合は従来どおりupsertされること/子データが無ければ確認クエリを呼ばないこと)。既存テストの`skipped`期待値に新フィールドを追記
+  - `npm install`(node_modules未展開だったため)→ `npm run lint && npm run typecheck && npm test` すべて成功(lint: エラー・警告なし / typecheck: エラーなし / test: 39ファイル410件全通過)
+  - コミット(6680791)してPR #108のブランチへpush、PR #108にコメントで対応内容と完了報告を投稿
+- できていないこと:
+  - 実データでの疎通確認(実Supabaseへの実INSERT)は元PR時点から引き続き未実施。この作業環境に実Supabaseの鍵が無いため。今回の修正の検証はユニットテスト(フェイクSupabaseクライアント)のみ
+- 不明点・仮置き:
+  - 所有権チェックに失敗した子データの扱いを「リクエスト全体をエラーにして拒否」ではなく「その行だけスキップして移行は継続」とした。タスク指示で「仕様上どちらが適切か判断し、完了報告に明記する」とされていたための判断で、仕様(docs/03_tech_stack.md)に明記は無い。理由: (1) 既存の`unknown_seed_spot`スキップと一貫させる、(2) 通常のユーザー操作ではこの分岐に到達しない(到達するのは攻撃時か想定外のバグ時のみ)ため、全体を失敗させて正当なデータの移行まで巻き込むより、不正行だけを除外して残りを進める方が移行APIの目的(ゲストデータをできるだけ救う)に合う
+- 成果物:
+  - PR #108 https://github.com/ReoKM/otaku_no_shiori/pull/108(追加コミット 6680791)
+  - `src/lib/guest-migration.ts`(IDOR対策の所有権確認・フィルタリングを追加)
+  - `src/lib/guest-migration.test.ts`(IDORシナリオのテスト追加)
+  - `src/app/api/migration/guest/route.ts`(JSDocのレスポンス例更新)
+
 ## 16:10 OAuthコールバックルート(/auth/callback)の実装
 
 - Goal: OAuthコールバックルート(`/auth/callback`)を実装し、X/GoogleのOAuthログインが完了できる状態にする
