@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PhotoMigrationError, buildPhotoStoragePath, migrateGuestPhoto } from "./guest-photo-migration";
@@ -24,16 +24,27 @@ function validInput(overrides: Partial<ValidatedPhotoUploadInput> = {}): Validat
 interface FakeClientOptions {
   /** shiori所有権チェックの結果。undefinedなら「見つからない」、Errorなら問い合わせ自体が失敗。 */
   ownedShioriRow?: { id: string } | null | Error;
+  /**
+   * 写真枚数上限チェックの`count`クエリが返す件数(自分自身のphoto_idを除いた既存件数)。
+   * `Error`を渡すとカウントクエリ自体が失敗したことにする。
+   */
+  existingOtherPhotoCount?: number | Error;
   uploadError?: { message: string } | null;
   upsertError?: { code?: string; message: string } | null;
 }
 
 function fakeAdminClient(options: FakeClientOptions = {}) {
-  const { ownedShioriRow = { id: SHIORI_ID }, uploadError = null, upsertError = null } = options;
+  const {
+    ownedShioriRow = { id: SHIORI_ID },
+    existingOtherPhotoCount = 0,
+    uploadError = null,
+    upsertError = null,
+  } = options;
 
   const uploadCalls: { path: string; body: unknown; options: unknown }[] = [];
   const upsertCalls: { table: string; rows: unknown[]; options: unknown }[] = [];
   const shioriQueryCalls: { id: string; userId: string }[] = [];
+  const countQueryCalls: { shioriId: string; excludedPhotoId: string }[] = [];
 
   const client = {
     from: (table: string) => {
@@ -56,6 +67,20 @@ function fakeAdminClient(options: FakeClientOptions = {}) {
       }
       if (table === "photos") {
         return {
+          select: () => ({
+            eq: (_col1: string, shioriId: string) => ({
+              neq: (_col2: string, excludedPhotoId: string) => {
+                countQueryCalls.push({ shioriId, excludedPhotoId });
+                if (existingOtherPhotoCount instanceof Error) {
+                  return Promise.resolve({
+                    count: null,
+                    error: { message: existingOtherPhotoCount.message },
+                  });
+                }
+                return Promise.resolve({ count: existingOtherPhotoCount, error: null });
+              },
+            }),
+          }),
           upsert: (rows: unknown[], opts: unknown) => {
             upsertCalls.push({ table, rows, options: opts });
             if (upsertError) {
@@ -81,7 +106,7 @@ function fakeAdminClient(options: FakeClientOptions = {}) {
     },
   } as unknown as SupabaseClient;
 
-  return { client, uploadCalls, upsertCalls, shioriQueryCalls };
+  return { client, uploadCalls, upsertCalls, shioriQueryCalls, countQueryCalls };
 }
 
 describe("buildPhotoStoragePath", () => {
@@ -93,8 +118,8 @@ describe("buildPhotoStoragePath", () => {
 });
 
 describe("migrateGuestPhoto", () => {
-  it("成功時: 所有権確認→Storageアップロード→photos upsertの順で行い、storage_pathを返す", async () => {
-    const { client, uploadCalls, upsertCalls, shioriQueryCalls } = fakeAdminClient();
+  it("成功時: 所有権確認→枚数上限確認→Storageアップロード→photos upsertの順で行い、storage_pathを返す", async () => {
+    const { client, uploadCalls, upsertCalls, shioriQueryCalls, countQueryCalls } = fakeAdminClient();
 
     const result = await migrateGuestPhoto(client, USER_ID, validInput());
 
@@ -103,6 +128,7 @@ describe("migrateGuestPhoto", () => {
       storage_path: `${USER_ID}/${SHIORI_ID}/${PHOTO_ID}.jpg`,
     });
     expect(shioriQueryCalls).toEqual([{ id: SHIORI_ID, userId: USER_ID }]);
+    expect(countQueryCalls).toEqual([{ shioriId: SHIORI_ID, excludedPhotoId: PHOTO_ID }]);
     expect(uploadCalls).toHaveLength(1);
     expect(uploadCalls[0].path).toBe(`${USER_ID}/${SHIORI_ID}/${PHOTO_ID}.jpg`);
     expect(uploadCalls[0].options).toMatchObject({ contentType: "image/jpeg", upsert: true });
@@ -118,12 +144,13 @@ describe("migrateGuestPhoto", () => {
   });
 
   it("IDOR対策: 他人(または存在しない)のshiori_idを渡すとshiori_not_ownedで拒否し、アップロードしない", async () => {
-    const { client, uploadCalls, upsertCalls } = fakeAdminClient({ ownedShioriRow: null });
+    const { client, uploadCalls, upsertCalls, countQueryCalls } = fakeAdminClient({ ownedShioriRow: null });
 
     const error = await migrateGuestPhoto(client, USER_ID, validInput()).catch((e) => e as PhotoMigrationError);
 
     expect(error).toBeInstanceOf(PhotoMigrationError);
     expect((error as PhotoMigrationError).reason).toBe("shiori_not_owned");
+    expect(countQueryCalls).toHaveLength(0);
     expect(uploadCalls).toHaveLength(0);
     expect(upsertCalls).toHaveLength(0);
   });
@@ -166,5 +193,77 @@ describe("migrateGuestPhoto", () => {
     const second = await migrateGuestPhoto(client2, USER_ID, validInput());
 
     expect(first.storage_path).toBe(second.storage_path);
+  });
+});
+
+describe("migrateGuestPhoto: 写真枚数上限(F6)のサーバー側強制", () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI;
+  });
+
+  it("上限未満: 既存件数(自分自身を除く)が上限より十分少なければアップロードを許可する", async () => {
+    process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI = "5";
+    const { client, uploadCalls, upsertCalls } = fakeAdminClient({ existingOtherPhotoCount: 2 });
+
+    const result = await migrateGuestPhoto(client, USER_ID, validInput());
+
+    expect(result.photo_id).toBe(PHOTO_ID);
+    expect(uploadCalls).toHaveLength(1);
+    expect(upsertCalls).toHaveLength(1);
+  });
+
+  it("上限ちょうど: 追加後にちょうど上限に達する場合(既存件数=上限-1)はアップロードを許可する", async () => {
+    process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI = "5";
+    const { client, uploadCalls, upsertCalls } = fakeAdminClient({ existingOtherPhotoCount: 4 });
+
+    const result = await migrateGuestPhoto(client, USER_ID, validInput());
+
+    expect(result.photo_id).toBe(PHOTO_ID);
+    expect(uploadCalls).toHaveLength(1);
+    expect(upsertCalls).toHaveLength(1);
+  });
+
+  it("上限超過: 既に上限(自分自身を除く件数)に達している場合はphoto_limit_exceededで拒否し、アップロードしない", async () => {
+    process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI = "5";
+    const { client, uploadCalls, upsertCalls } = fakeAdminClient({ existingOtherPhotoCount: 5 });
+
+    const error = await migrateGuestPhoto(client, USER_ID, validInput()).catch((e) => e as PhotoMigrationError);
+
+    expect(error).toBeInstanceOf(PhotoMigrationError);
+    expect((error as PhotoMigrationError).reason).toBe("photo_limit_exceeded");
+    expect(uploadCalls).toHaveLength(0);
+    expect(upsertCalls).toHaveLength(0);
+  });
+
+  it("上限超過(既定値20を使うケース): 環境変数未設定でも既存20件なら拒否する", async () => {
+    const { client, uploadCalls } = fakeAdminClient({ existingOtherPhotoCount: 20 });
+
+    const error = await migrateGuestPhoto(client, USER_ID, validInput()).catch((e) => e as PhotoMigrationError);
+
+    expect(error).toBeInstanceOf(PhotoMigrationError);
+    expect((error as PhotoMigrationError).reason).toBe("photo_limit_exceeded");
+    expect(uploadCalls).toHaveLength(0);
+  });
+
+  it("自分自身(同じphoto_id)の既存行はカウント対象から除外するクエリになっている(冪等な再送を誤って拒否しない)", async () => {
+    process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI = "5";
+    const { client, countQueryCalls, uploadCalls } = fakeAdminClient({ existingOtherPhotoCount: 0 });
+
+    await migrateGuestPhoto(client, USER_ID, validInput());
+
+    expect(countQueryCalls).toEqual([{ shioriId: SHIORI_ID, excludedPhotoId: PHOTO_ID }]);
+    expect(uploadCalls).toHaveLength(1);
+  });
+
+  it("枚数確認クエリ自体が失敗したらphoto_limit_check_failedを投げ、アップロードしない", async () => {
+    const { client, uploadCalls } = fakeAdminClient({
+      existingOtherPhotoCount: new Error("connection error"),
+    });
+
+    const error = await migrateGuestPhoto(client, USER_ID, validInput()).catch((e) => e as PhotoMigrationError);
+
+    expect(error).toBeInstanceOf(PhotoMigrationError);
+    expect((error as PhotoMigrationError).reason).toBe("photo_limit_check_failed");
+    expect(uploadCalls).toHaveLength(0);
   });
 });

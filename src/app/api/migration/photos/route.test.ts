@@ -41,12 +41,19 @@ function fakeAuthedServerClient(userId: string | null) {
 interface FakeAdminOptions {
   /** trueなら`shiori_id`をこのユーザー所有として扱う。falseなら他人/存在しない扱い(IDOR拒否)。 */
   isOwnedByUser?: boolean;
+  /** 写真枚数上限チェックの既存件数(自分自身のphoto_idを除く)。既定0(上限に余裕あり)。 */
+  existingOtherPhotoCount?: number;
   uploadError?: { message: string } | null;
   upsertError?: { code?: string; message: string } | null;
 }
 
 function fakeAdminClient(options: FakeAdminOptions = {}) {
-  const { isOwnedByUser = true, uploadError = null, upsertError = null } = options;
+  const {
+    isOwnedByUser = true,
+    existingOtherPhotoCount = 0,
+    uploadError = null,
+    upsertError = null,
+  } = options;
   const uploadCalls: { path: string }[] = [];
   const upsertCalls: { rows: unknown[] }[] = [];
 
@@ -69,6 +76,11 @@ function fakeAdminClient(options: FakeAdminOptions = {}) {
       }
       if (table === "photos") {
         return {
+          select: () => ({
+            eq: () => ({
+              neq: () => Promise.resolve({ count: existingOtherPhotoCount, error: null }),
+            }),
+          }),
           upsert: (rows: unknown[]) => {
             upsertCalls.push({ rows });
             if (upsertError) {
@@ -122,6 +134,7 @@ function multipartRequest(fields: Record<string, string | File | null> = {}): Re
 
 afterEach(() => {
   vi.resetAllMocks();
+  delete process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI;
 });
 
 describe("POST /api/migration/photos", () => {
@@ -180,6 +193,33 @@ describe("POST /api/migration/photos", () => {
     expect(body.ok).toBe(false);
     expect(body.error.reason).toBe("shiori_not_owned");
     expect(uploadCalls).toHaveLength(0);
+  });
+
+  it("写真枚数が上限に達している場合は409で拒否する(F6上限のサーバー側強制)", async () => {
+    process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI = "5";
+    mockCreateSupabaseServerClient.mockResolvedValue(fakeAuthedServerClient("user-1"));
+    const { client, uploadCalls } = fakeAdminClient({ existingOtherPhotoCount: 5 });
+    mockGetSupabaseAdminClient.mockReturnValue(client);
+
+    const res = await POST(multipartRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(body.ok).toBe(false);
+    expect(body.error.reason).toBe("photo_limit_exceeded");
+    expect(uploadCalls).toHaveLength(0);
+  });
+
+  it("写真枚数が上限未満(ちょうど上限に達する分を含む)なら200で成功する", async () => {
+    process.env.NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI = "5";
+    mockCreateSupabaseServerClient.mockResolvedValue(fakeAuthedServerClient("user-1"));
+    const { client, uploadCalls } = fakeAdminClient({ existingOtherPhotoCount: 4 });
+    mockGetSupabaseAdminClient.mockReturnValue(client);
+
+    const res = await POST(multipartRequest());
+
+    expect(res.status).toBe(200);
+    expect(uploadCalls).toHaveLength(1);
   });
 
   it("認証済み+所有権あり+有効なボディなら200とstorage_pathを返す", async () => {

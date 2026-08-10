@@ -41,8 +41,19 @@ import { PhotoMigrationError, migrateGuestPhoto } from "@/lib/guest-photo-migrat
  * {"ok":false,"error":{"reason":"shiori_not_owned","message":"指定されたしおりが見つかりません"}}
  * ```
  *
+ * レスポンス例(失敗・写真枚数上限(F6)に到達済み):
+ * ```json
+ * {"ok":false,"error":{"reason":"photo_limit_exceeded","message":"このしおりの写真は上限(20枚)に達しています"}}
+ * ```
+ *
+ * 写真枚数上限(1しおりあたり`getMaxPhotosPerShiori()`枚。既定20枚、環境変数
+ * `NEXT_PUBLIC_MAX_PHOTOS_PER_SHIORI`でのみ変更可・ユーザー設定不可)は
+ * クライアント側チェックだけに頼らずこのAPI(`migrateGuestPhoto`)でも強制する
+ * (直接APIを叩く迂回でStorage無料枠を枯渇させられないようにするため)。
+ *
  * 1枚ずつ成否を返す設計のため、失敗した写真だけをこのAPIへ再送すればよい
- * (`photo_id`が同じなら、Storage側は上書き・`photos`テーブル側はupsertのため冪等)。
+ * (`photo_id`が同じなら、Storage側は上書き・`photos`テーブル側はupsertのため冪等。
+ * 上限チェックも自分自身の既存行は除外して数えるため、再送は上限超過にならない)。
  */
 
 // Cookieセッションを読むため常に最新の状態で処理する。
@@ -86,7 +97,12 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: true, ...result }, { status: 200 });
   } catch (cause) {
     if (cause instanceof PhotoMigrationError) {
-      const status = cause.reason === "shiori_not_owned" ? 404 : 502;
+      const status =
+        cause.reason === "shiori_not_owned"
+          ? 404
+          : cause.reason === "photo_limit_exceeded"
+            ? 409
+            : 502;
       return Response.json(
         { ok: false, error: { reason: cause.reason, code: cause.code, message: cause.message } },
         { status },
