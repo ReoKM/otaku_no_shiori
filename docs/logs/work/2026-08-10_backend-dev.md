@@ -1,0 +1,51 @@
+## 12:35 SupabaseクライアントのNext.js組み込み(browser/server/admin + 接続確認)
+
+- Goal: Next.jsからSupabaseへブラウザ/サーバー両方のクライアントで接続でき、接続確認(APIルート + CLIスクリプト)まで動く状態のPRを1本出す
+- 結果: 達成
+- やったこと:
+  - `main` から `feat/supabase-client` ブランチを作成
+  - 依存追加: `@supabase/supabase-js@2.112.2` / `@supabase/ssr@0.12.4`
+    - `@supabase/ssr` はオーナー判断で採用。App RouterでCookieベースのセッションを扱う公式手段であり、F8(X/Google OAuth)実装時の書き直しを避けるため
+  - `src/lib/supabase/env.ts`: 環境変数の読み出し・検証
+    - `getSupabasePublicEnv()`(URL + anonキー)、`getSupabaseServiceRoleKey()`
+    - 未設定・空白のみは `MissingSupabaseEnvError`(変数名と設定手順の案内付き。鍵の値はメッセージに含めない)
+    - `getSupabaseServiceRoleKey()` は `typeof window !== "undefined"` なら例外。バンドルミスで管理者鍵が漏れる事故を実行時にも止める
+  - `src/lib/supabase/client.ts`: ブラウザ用(`getSupabaseBrowserClient`)。`createBrowserClient` + anonキー。1タブ1インスタンスで使い回す
+  - `src/lib/supabase/server.ts`: サーバー用(`createSupabaseServerClient`)。`createServerClient` + `next/headers` の `cookies()` を `getAll`/`setAll` で接続。リクエストごとに新規生成。Server ComponentからのCookie書き込み不可は握りつぶす(公式パターン)
+  - `src/lib/supabase/admin.ts`: `service_role` 用(`getSupabaseAdminClient`)。`persistSession: false` / `autoRefreshToken: false`。用途をF8の一括INSERT等に限定する旨をコメントで明記
+  - `src/lib/supabase/health.ts`: 疎通チェックの共通ロジック(`checkSupabaseConnection` / `toHealthHint`)
+    - 対象は `spots` テーブル。未ログイン(anon)でも `status='public'` / `source='seed'` を読めるRLS設定のためログイン不要で判定できる
+    - `select("id", { count: "exact", head: true })` で行データを取らず件数のみ(無料枠の帯域保護)
+    - 例外を投げず必ず結果オブジェクトを返す。失敗時は原因別のヒント(マイグレーション未適用 / APIキー不正 / URL・ネットワーク不達)を付ける
+  - `src/app/api/health/supabase/route.ts`: `GET /api/health/supabase`。成功200 / 失敗503。`dynamic = "force-dynamic"`。レスポンスに鍵・URLを含めない
+  - `scripts/check-supabase.mts` + `npm run check:supabase`: CLIからの疎通確認。環境変数の有無 → DB疎通 の順に表示し、失敗時は終了コード1
+    - 鍵の値は表示せず、接頭辞(`sb_publishable_…`)と文字数のみ。URLは公開情報かつ打ち間違い発見に必要なのでそのまま表示
+    - Nodeの型ストリッピングで `.mts` を直接実行(`--env-file-if-exists=.env.local`)。実験的機能の警告は `--disable-warning` で抑止
+  - `tsconfig.json`: `allowImportingTsExtensions: true` を追加(`scripts/*.mts` から `.ts` を相対importするため。`noEmit` なので出力への影響なし)
+  - テスト14件追加: `src/lib/supabase/env.test.ts`(9件)/ `src/lib/supabase/health.test.ts`(11件)。実Supabaseへは接続せず、CIにSecretsを不要にした
+  - `supabase/README.md` 更新: 3クライアントの使い分け表、接続確認2通りの手順と出力例、次タスク以降の未実装リストを更新
+  - ローカル `.env.local` をNext.jsのプロジェクトルート(`otaku_no_shiori/`)に配置。元は1つ上の階層にあり、Nextから読めていなかった(`.gitignore` の `.env*` に該当し追跡外であることを確認済み)
+  - 動作確認:
+    - `npm run check:supabase` → `✓ spots テーブルへ接続成功 (anonキーで見えている行数: 0)`。既存プロジェクトにマイグレーション0001が適用済みであることも同時に確認できた
+    - `npm run dev` + `curl localhost:3000/api/health/supabase` → HTTP 200 / `{"ok":true,"table":"spots","visibleRowCount":0}`
+    - 異常系: 存在しないURLを環境変数で渡して実行 → 終了コード1、`hint` にURL・ネットワーク確認の案内が出ることを確認
+  - `npm run lint && npm run typecheck && npm test` すべて成功(テスト373件全通過、lintエラー・警告なし)
+- できていないこと:
+  - `GET /api/health/supabase` の異常系(環境変数未設定時の503)を実サーバーで実行しての確認。環境変数を外すにはdevサーバー再起動が要るため、ユニットテスト(`env.test.ts`)と `health.ts` の分岐テストで担保した
+  - DBスキーマからの型生成(`supabase gen types`)。現状クライアントは `SupabaseClient`(型引数なし)で、テーブルの列名・型は静的検査されない。実際にテーブルを読み書きするAPI実装タスクで導入を検討する
+  - 認証まわり(OAuthコールバック、セッション更新middleware)は未着手。F8=W3スコープのため今回は対象外
+  - Netlifyプレビューデプロイでの確認(Netlify環境変数へのキー登録はオーナー作業のため未実施)
+- 不明点・仮置き:
+  - 疎通確認の対象テーブルを `spots` に仮置きした。仕様に指定は無い。ログイン不要で読めるRLS設定を持つ唯一のテーブルであることを理由に選定
+  - `GET /api/health/supabase` は認証なしで誰でも叩ける。返す情報はテーブルの到達可否とPostgRESTのエラーコード/メッセージのみで鍵・URLは含めないが、本番公開前に「認証必須にするか」「本番では無効化するか」をPM/オーナー判断で決めたい
+  - `.env.local` は上位ディレクトリからプロジェクトルートへ「コピー」した(削除は不可逆のため元ファイルは残している)。上位の重複ファイルを消すかはオーナー判断
+- 成果物:
+  - PR: (作成後にURLを追記)
+  - `src/lib/supabase/env.ts` / `client.ts` / `server.ts` / `admin.ts` / `health.ts`
+  - `src/lib/supabase/env.test.ts` / `health.test.ts`
+  - `src/app/api/health/supabase/route.ts`
+  - `scripts/check-supabase.mts`
+  - `package.json` / `package-lock.json`(`@supabase/supabase-js` / `@supabase/ssr` 追加、`check:supabase` スクリプト追加)
+  - `tsconfig.json`(`allowImportingTsExtensions`)
+  - `supabase/README.md`
+- 作業ログ: docs/logs/work/2026-08-10_backend-dev.md
