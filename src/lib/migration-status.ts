@@ -3,10 +3,9 @@
  * 参照: docs/design/screens/S6_設定アカウント.md「LoggedInSection」2. MigrationStatusCard、「状態」表
  *
  * 実際の移行トリガー・進捗取得(ゲスト→クラウドのテキスト一括移行・写真1枚ずつのアップロード)は
- * Issue #99「移行フロー結線」のスコープ。本Issue(#96)ではこのカードの表示欄だけを用意し、
- * `src/components/settings/LoggedInSection.tsx`からは`status: null`（＝移行対象データなし/未連携）
- * を渡した状態でPRを出す。Issue #99はここに実際の移行状態を渡す配線を追加すればよい
- * （`MigrationStatus`型・`MigrationStatusCard`コンポーネント自体の変更は基本不要な想定）。
+ * `src/lib/guest-migration-orchestrator.ts` + `src/lib/use-guest-migration.ts`(Issue #99
+ * 「移行フロー結線」)が担当する。`MigrationStatus`型はIssue #99実装時にそのまま流用でき、
+ * 型調整は不要だった(`runGuestMigration`の戻り値をこの型の3種にそのままマップしている)。
  */
 
 /**

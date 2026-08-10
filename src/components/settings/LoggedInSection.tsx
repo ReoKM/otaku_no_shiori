@@ -1,4 +1,5 @@
 import type { OAuthProvider } from "@/lib/supabase/oauth-login";
+import { useGuestMigration } from "@/lib/use-guest-migration";
 import { AccountStatusRow } from "./AccountStatusRow";
 import { LogoutButton } from "./LogoutButton";
 import { MigrationStatusCard } from "./MigrationStatusCard";
@@ -10,16 +11,17 @@ import { MigrationStatusCard } from "./MigrationStatusCard";
  * `AccountStatusRow`(ログイン中プロバイダ表示)・`MigrationStatusCard`(データ移行状態)・
  * `LogoutButton`をこの順で並べる(仕様のコンポーネント構造どおり)。
  *
- * `MigrationStatusCard`には現時点で`status={null}`を渡している(カードごと非表示になる)。
- * 実際の移行状態(移行中/完了/一部失敗)を取得・連携する処理はIssue #99「移行フロー結線」の
- * スコープ。#99はここに実データを渡す配線を追加すればよい
- * (`src/lib/migration-status.ts`の`MigrationStatus`型を参照)。
+ * `MigrationStatusCard`には`useGuestMigration`(`src/lib/use-guest-migration.ts`、Issue #99)が
+ * 返す実データを渡す。移行対象データが無い/既に移行済みの場合は`status`が`null`になり
+ * カードごと非表示になる(仕様どおり)。
  */
 export function LoggedInSection({ provider }: { provider: OAuthProvider | null }) {
+  const { status, onRetry } = useGuestMigration();
+
   return (
     <section className="flex flex-col gap-6">
       <AccountStatusRow provider={provider} />
-      <MigrationStatusCard status={null} />
+      <MigrationStatusCard status={status} onRetry={onRetry} />
       <LogoutButton />
     </section>
   );

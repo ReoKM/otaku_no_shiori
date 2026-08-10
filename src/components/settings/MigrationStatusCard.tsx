@@ -8,13 +8,11 @@ import {
  * S6データ移行状態カード。
  * 参照: docs/design/screens/S6_設定アカウント.md「LoggedInSection」2. MigrationStatusCard、「状態」表
  *
- * `status`が`null`(移行対象データが無い/移行状態が未連携)の場合はカードごと非表示にする
+ * `status`が`null`(移行対象データが無い/既に移行済み)の場合はカードごと非表示にする
  * (仕様「移行対象データが無い場合はカードごと非表示」)。
  *
- * 実際の移行トリガー・進捗取得(Issue #99「移行フロー結線」)はまだこのカードに配線されていない。
- * 呼び出し元(`LoggedInSection`)は現時点で`status={null}`を渡すため、本Issue(#96)の時点では
- * このカードは表示されない。Issue #99は`status`・`onRetry`に実データを渡すだけでよい想定
- * (このコンポーネント自体の変更は基本不要)。
+ * 実際の移行トリガー・進捗取得は`src/lib/use-guest-migration.ts`(Issue #99「移行フロー結線」)が
+ * 行い、呼び出し元(`LoggedInSection`)が`status`・`onRetry`をそのまま渡す。
  */
 export function MigrationStatusCard({
   status,

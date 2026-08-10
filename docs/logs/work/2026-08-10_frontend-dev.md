@@ -114,3 +114,43 @@
     - `src/components/shiori-detail/LoginPromptBanner.tsx`(新規)
     - `src/components/shiori-form/ShioriCreateForm.tsx`(`markShioriJustCreated`呼び出しを追加)
     - `src/app/shiori/[id]/layout.tsx`(`LoginPromptBanner`の描画を追加)
+
+## 17:10 移行フロー結線(クライアント側オーケストレーション)
+
+- Goal: Issue #99に従い、ログイン成功検知→`/api/migration/guest`(テキスト一括)→`/api/migration/photos`(写真1枚ずつ)の順でオーケストレーションし、`MigrationStatusCard`(#96)に実データを接続し、成功時に`guest-store.ts`へ移行済みフラグを付与、失敗時はゲストデータを消さずリトライできる実装+テストを追加してmainからのブランチにpushする
+- 結果: 達成
+- やったこと:
+  - `docs/03_tech_stack.md`「ゲスト→ログインのデータ移行」手順4・6、`docs/design/screens/S6_設定アカウント.md`の`MigrationStatusCard`節・「状態」表・文言一覧を精読
+  - 前提タスク(#94〜#98)の実装を読み込み: `src/lib/migration-status.ts`(`MigrationStatus`型3種)、`MigrationStatusCard.tsx`(`status`/`onRetry`のprops形状)、`SettingsRoute.tsx`・`auth-provider.ts`(`onAuthStateChange`の使い方パターン)、`POST /api/migration/guest`(`guest-migration.ts`・`guest-migration-validation.ts`。テキスト一括、冪等upsert)、`POST /api/migration/photos`(`guest-photo-migration.ts`・`photo-upload-validation.ts`。写真1枚=1リクエスト、`multipart/form-data`)、`guest-store.ts`(IndexedDBの保存形状)
+  - `main`を最新化(fast-forward、#96マージ分を取り込み)してから`feature/issue-99-migration-flow`ブランチを作成
+  - `src/lib/guest-store.ts`を拡張(DB_VERSION 3→4): `migration_state`オブジェクトストア(単一行)を追加し、`getGuestMigrationState()`/`markGuestDataMigrated()`(移行済みフラグの取得・付与。端末内データ自体は削除しない)、`collectAllGuestTextData()`(全しおり分のしおり・持ち物・TODO・旅程・UGCスポット・行きたいスポット紐付けを一括取得)、`listAllGuestPhotos()`(全しおり分の写真を一括取得)を追加
+  - `src/lib/guest-migration-orchestrator.ts`を新規実装: `buildGuestMigrationRequestBody()`(ゲスト側の型から`POST /api/migration/guest`が読み取るフィールドのみに絞り込む。`budget_total`/`budget_memo`/`spots.source`/`spots.status`は送らない)、`createFetchGuestMigrationApiClient()`(実際に`fetch`で両APIを呼ぶ実装)、`runGuestMigration()`(移行フロー本体。①移行済みフラグ確認→②テキスト送信(冪等)→③写真を1枚ずつ送信して進捗通知→④全件成功で移行済みフラグ付与、の順。テキスト失敗時は写真を送らない、写真は失敗分のみ`failedPhotoIds`として返す)。Supabase/IndexedDB/fetchへの依存はすべて引数(`guestStore`/`apiClient`)経由のDIにし、ユニットテスト可能にした
+  - `src/lib/use-guest-migration.ts`を新規実装(`"use client"`フック): `supabase.auth.onAuthStateChange`の`SIGNED_IN`イベントでログイン成功を検知して`runGuestMigration`を実行し、マウント時点で既にログイン済みだったケースにも追従(移行済みフラグがあるため二重実行しても実害無し)。進捗を`MigrationStatus`型にマップして返し、`onRetry`は直前に失敗した`photo_id`一覧のみを再送する
+  - `src/components/settings/LoggedInSection.tsx`を更新: `useGuestMigration()`の結果を`MigrationStatusCard`の`status`/`onRetry`にそのまま配線(プレースホルダの`status={null}`を置き換え)
+  - `src/lib/migration-status.ts`・`MigrationStatusCard.tsx`の古いコメント(「Issue #99未実装」)を実装後の状態に更新。**`MigrationStatus`型・`MigrationStatusCard`コンポーネント自体は変更不要だった**(`runGuestMigration`の戻り値をそのままマップできたため)
+  - テスト追加: `guest-migration-orchestrator.test.ts`(8件。リクエストボディの絞り込み、移行済みフラグ確認でスキップ、対象データ0件でno_data、テキスト→写真全件成功、テキスト失敗時に写真を送らない、写真の一部失敗、再試行モードでの失敗分のみ再送)、`guest-store.guest-migration.test.ts`(3件。移行済みフラグの初期値・付与後の値、複数しおり分のテキスト・写真の一括取得)
+  - `npm run lint && npm run typecheck && npm test`を実行し全て成功(51ファイル512件のテストが全通過。既存50ファイルから今回2ファイル追加)
+  - 作業前後で`git status`・`git branch --show-current`を確認し、他セッションとの作業ディレクトリ共有による混線が無いことを確認(今回は発生しなかった)
+  - `feature/issue-99-migration-flow`をoriginへpush(PR作成はしていない。オーケストレーター側で作成予定)
+- できていないこと:
+  - 実データ・実ブラウザでのE2E確認(実際にゲストとしてしおり・写真を作成→X/Googleでログイン→クラウドへ移行される様子の目視確認、再試行ボタンの実操作確認)は、この環境に実Supabaseの鍵・ブラウザ対話操作の手段が無いため未実施。Netlifyプレビューデプロイ上でのQA/オーナー手動確認に委ねる
+  - コンポーネント(`LoggedInSection.tsx`・`use-guest-migration.ts`)のDOM/Reactレンダリングテストは追加していない。このリポジトリにReact Testing Library/jsdomが導入されておらず(`vitest.config.ts`は`environment: "node"`)、既存のuse-*.tsフック(`use-compact-header.ts`等)にも専用テストが無い方針を踏襲し、実際の移行ロジック(`runGuestMigration`・`buildGuestMigrationRequestBody`)と`guest-store.ts`の新規関数のみをユニットテスト対象にした
+  - `budget_items`(予算)は`POST /api/migration/guest`(#97のAPI実装)が対応していないため、本PRの移行対象にも含めていない(既存APIの仕様どおり。バックエンド側の対応が必要な場合は別Issueが必要)
+- 不明点・仮置き:
+  - 進捗表示の「件数」の意味: `MigrationStatusCard`の文言「しおりを移行しています…(3/5件)」はIssue #96時点でも仕様に具体例が無く仮置きだった。本PRでは「テキスト一括送信を1件+写真1枚を1件」とみなした合計を分母・分子にした(例: 写真4枚なら合計5件、テキスト送信完了で1/5、写真が1枚成功するごとに2/5→5/5)。しおりの件数そのものとは一致しない場合がある(文言上「しおり」という語だが移行データ全体を指す扱いとした)
+  - ログイン成功の検知は`onAuthStateChange`の`SIGNED_IN`イベントを主に使いつつ、マウント時点で既にログイン済みだった場合(前回セッションで移行が未完了のまま閉じたケースを拾うため)にも1回実行する設計にした。仕様書に「いつ移行処理を開始するか」の明記が無いための実装判断
+  - 移行対象データがそもそも0件(ゲストしおり0件)の場合も、移行済みフラグを立てて以後のチェックを省略する設計にした(仕様の「移行対象データが無い場合はカードごと非表示」を「毎回0件の再チェックをしない」実装として解釈)
+  - 再試行(`onRetry`)は前回失敗した写真のみを再送し、テキストは(冪等なため)毎回丸ごと再送する設計にした。Issueの指示(「テキストは冪等なupsertのため丸ごと再送でよい」)どおり
+  - 本PRの変更行数(新規ファイル4本+既存4ファイル修正、計818行)はCLAUDE.mdの目安(400行以内)を超えている。移行フロー(検知→テキスト→写真→フラグ→リトライ)を1つの結線として実装する必要があり分割が難しかったための判断。内訳はコード本体(オーケストレーター288行+フック106行+guest-store追加97行)よりテスト(315行)とJSDocコメントが大きな割合を占める
+- 成果物:
+  - ブランチ: `feature/issue-99-migration-flow`(originにpush済み、PR未作成。オーケストレーター側でPR作成予定)
+  - コミット: `96ca198 feat: 移行フロー結線(ゲスト→クラウド)を実装 (#99)`
+  - 変更ファイル一覧:
+    - `src/lib/guest-migration-orchestrator.ts`(新規)
+    - `src/lib/guest-migration-orchestrator.test.ts`(新規)
+    - `src/lib/use-guest-migration.ts`(新規)
+    - `src/lib/guest-store.guest-migration.test.ts`(新規)
+    - `src/lib/guest-store.ts`(migration_stateストア・移行関連関数を追加、DB_VERSION 3→4)
+    - `src/lib/migration-status.ts`(コメント更新のみ)
+    - `src/components/settings/LoggedInSection.tsx`(`useGuestMigration`を配線)
+    - `src/components/settings/MigrationStatusCard.tsx`(コメント更新のみ)
