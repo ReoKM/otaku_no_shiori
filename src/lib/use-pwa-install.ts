@@ -98,9 +98,17 @@ export function usePwaInstall() {
     if (!deferredPrompt) {
       return;
     }
-    // `prompt()`は1回のイベントにつき1度しか呼べないため、結果によらず必ず破棄する
-    await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+    try {
+      // `prompt()`は1回のイベントにつき1度しか呼べない。このフックは`AppMenu`(メニュー内の
+      // インストール項目)と`InstallPromptBanner`(常設バナー)の両方から独立に呼ばれ、
+      // それぞれが同じ`beforeinstallprompt`イベントを別々の状態として保持しているため、
+      // 片方で既に使用済みのイベントをもう片方が呼ぶと`InvalidStateError`で拒否されうる。
+      // 画面を壊さないよう例外は握りつぶす(`src/lib/supabase/health.ts`と同じ方針)。
+      await deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+    } catch {
+      // 既に使用済み等で失敗しても、下のsetDeferredPrompt(null)で導線自体は片付ける
+    }
     setDeferredPrompt(null);
   }, [deferredPrompt]);
 

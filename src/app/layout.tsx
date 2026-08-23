@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { InstallPromptBanner } from "@/components/common/InstallPromptBanner";
 import { ServiceWorkerRegistration } from "@/components/common/ServiceWorkerRegistration";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
+        <InstallPromptBanner />
         {children}
         <ServiceWorkerRegistration />
         {gaId && (
