@@ -21,6 +21,15 @@ export const metadata: Metadata = {
   description:
     "ライブ・イベント・聖地巡礼などオタクの遠征準備を1冊の「しおり」に。持ち物リスト・やること・旅程・行きたいスポット・写真の記録が、登録なしで無料で使える遠征ツールです。",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    // iOS Safari(ホーム画面追加)はSVGアイコン非対応のためPNGを別途指定する
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 // theme_colorはUIの差し色 color-sakura と揃える(manifest.webmanifestと同値)

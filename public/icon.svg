@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   オタクのしおり アプリアイコン(F10 PWA、栞モチーフの自作SVG)。
-  TODO: iOS Safari等はSVGアイコン非対応のため、今後 512x512 / 192x192 のPNGと
-  apple-touch-icon(180x180)を追加し、manifest.webmanifest の icons にも追記する。
+  512x512 / 192x192 のPNGと apple-touch-icon(180x180)はこのSVGから
+  `node scripts/generate-icons.mjs` で書き出す(public/icon-192.png・
+  icon-512.png・apple-touch-icon.png、manifest.webmanifest・src/app/layout.tsx
+  で参照)。SVGを更新したら3ファイルとも再生成すること。
   theme_color(#f6339a)はUIで使用しているTailwind pink-500 相当。
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
