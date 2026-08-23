@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AdSlotPlaceholder } from "@/components/common/AdSlotPlaceholder";
+import { AppMenu } from "@/components/common/AppMenu";
 import { EmptyState } from "@/components/shiori/EmptyState";
 import { FabButton } from "@/components/shiori/FabButton";
 import { ShioriCard } from "@/components/shiori/ShioriCard";
@@ -42,8 +43,9 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-paper">
-      <header className="sticky top-0 z-30 border-b border-paper-border bg-paper-surface px-6 py-4">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-paper-border bg-paper-surface pr-2.5 pl-6 py-4">
         <p className="text-xl font-black tracking-[0.01em] text-ink">オタクのしおり</p>
+        <AppMenu />
       </header>
       <main className="flex flex-1 flex-col gap-8 px-6 pt-5 pb-8">
         {state === "loading" && <ShioriListSkeleton />}

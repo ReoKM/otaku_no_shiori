@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppMenu } from "@/components/common/AppMenu";
 import { BackButton } from "@/components/common/BackButton";
 
 interface ShioriDetailHeaderProps {
@@ -59,15 +60,18 @@ export function ShioriDetailHeader({
           </>
         )}
       </div>
-      {shareHref && !loading && (
-        <Link
-          href={shareHref}
-          aria-label="共有画像を作る"
-          className="-mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center text-ink-strong"
-        >
-          <ShareIcon />
-        </Link>
-      )}
+      <div className="-mr-2.5 flex shrink-0 items-center">
+        {shareHref && !loading && (
+          <Link
+            href={shareHref}
+            aria-label="共有画像を作る"
+            className="flex h-11 w-11 shrink-0 items-center justify-center text-ink-strong"
+          >
+            <ShareIcon />
+          </Link>
+        )}
+        <AppMenu />
+      </div>
     </div>
   );
 }
