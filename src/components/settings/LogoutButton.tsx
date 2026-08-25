@@ -23,6 +23,9 @@ export function LogoutButton() {
     setIsSigningOut(true);
     try {
       await signOut(getSupabaseBrowserClient());
+    } catch {
+      // 環境変数未設定等でクライアント生成自体が失敗した場合も、ボタンの操作性は維持する
+      // (仕様どおりエラー表示は行わない。`finally`でのローディング解除のみ)。
     } finally {
       setIsSigningOut(false);
     }

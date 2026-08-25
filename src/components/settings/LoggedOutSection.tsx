@@ -59,7 +59,16 @@ export function LoggedOutSection({ initialLoginFailed = false }: { initialLoginF
     setLoginFailed(false);
     setLoadingProvider(provider);
 
-    const supabase = getSupabaseBrowserClient();
+    let supabase;
+    try {
+      // 環境変数未設定(`MissingSupabaseEnvError`)等はここで同期的に投げられうる。
+      // ログイン失敗と同じ扱い(`LoginErrorNotice`表示)にし、ボタンの操作性を壊さない。
+      supabase = getSupabaseBrowserClient();
+    } catch {
+      setLoadingProvider(null);
+      setLoginFailed(true);
+      return;
+    }
     const result = await signInWithProvider(supabase, provider, window.location.origin);
 
     if (!result.ok) {

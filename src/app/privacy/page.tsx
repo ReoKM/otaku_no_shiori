@@ -5,7 +5,8 @@ import Link from "next/link";
  * プライバシーポリシー(F: 公開準備、W3タスク4)。
  * 注意: この法務文書はドラフトであり、公開前にオーナーの承認が必須
  * (CLAUDE.md「オーナーへのエスカレーション」の権利・法務事項)。
- * 運営者情報・連絡先・制定日はオーナー確認後に確定する。
+ * 運営者名・制定日は2026-08-23にオーナー確認済み(運営者名「オタクのしおり運営事務局」、
+ * 制定日はリリース予定日2026-08-24)。お問い合わせ窓口は未確定のため引き続き「準備中」。
  */
 
 export const metadata: Metadata = {
@@ -86,10 +87,11 @@ export default function PrivacyPage() {
 
         <section className={sectionClass}>
           <h2 className={headingClass}>7. 運営者情報・お問い合わせ</h2>
-          <p className={bodyClass}>(準備中)</p>
+          <p className={bodyClass}>運営者: オタクのしおり運営事務局</p>
+          <p className={bodyClass}>お問い合わせ窓口: (準備中)</p>
         </section>
 
-        <p className="text-xs text-neutral-400">制定日: (準備中)</p>
+        <p className="text-xs text-neutral-400">制定日: 2026年8月24日</p>
 
         <nav className="border-t border-neutral-200 pt-4">
           <Link href="/terms" className="text-sm text-pink-500">

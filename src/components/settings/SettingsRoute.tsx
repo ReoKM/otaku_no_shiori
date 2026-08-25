@@ -38,30 +38,53 @@ export function SettingsRoute() {
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
     let isMounted = true;
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (!isMounted) {
-        return;
-      }
-      setAuthState(data.user ? { status: "loggedIn", user: data.user } : { status: "loggedOut" });
-    });
+    // 環境変数未設定(`MissingSupabaseEnvError`)等はここで同期的に投げられうるため、
+    // Promiseチェーンの外側もtry/catchで囲む(`src/components/shiori-detail/LoginPromptBanner.tsx`
+    // と同じ考え方: 判定できない場合はゲスト利用者を巻き込んで画面ごと壊さず、未ログイン扱いにする)。
+    try {
+      const supabase = getSupabaseBrowserClient();
 
-    // ログアウトボタン(`LogoutButton`)押下後、`LoggedOutSection`表示へ切り替えるための購読
-    // (仕様「完了後はLoggedOutSection表示に戻る」)。ログイン自体は外部OAuth画面への
-    // フルページ遷移を経て`/settings`に戻ってくるため、通常はマウント時の`getUser()`で
-    // 判定できるが、この購読があればページ遷移なしでの状態変化にも追従できる。
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthState(session?.user ? { status: "loggedIn", user: session.user } : { status: "loggedOut" });
-    });
+      supabase.auth
+        .getUser()
+        .then(({ data }) => {
+          if (!isMounted) {
+            return;
+          }
+          setAuthState(data.user ? { status: "loggedIn", user: data.user } : { status: "loggedOut" });
+        })
+        .catch(() => {
+          if (isMounted) {
+            setAuthState({ status: "loggedOut" });
+          }
+        });
 
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
+      // ログアウトボタン(`LogoutButton`)押下後、`LoggedOutSection`表示へ切り替えるための購読
+      // (仕様「完了後はLoggedOutSection表示に戻る」)。ログイン自体は外部OAuth画面への
+      // フルページ遷移を経て`/settings`に戻ってくるため、通常はマウント時の`getUser()`で
+      // 判定できるが、この購読があればページ遷移なしでの状態変化にも追従できる。
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setAuthState(session?.user ? { status: "loggedIn", user: session.user } : { status: "loggedOut" });
+      });
+
+      return () => {
+        isMounted = false;
+        subscription.unsubscribe();
+      };
+    } catch {
+      // 同期的なsetStateはeffect内では避ける(react-hooks/set-state-in-effect)ため、マイクロタスクへずらす。
+      queueMicrotask(() => {
+        if (isMounted) {
+          setAuthState({ status: "loggedOut" });
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
   }, []);
 
   return (
