@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { BottomSheet } from "@/components/list-ui/BottomSheet";
+import { SideDrawer } from "@/components/common/SideDrawer";
 import { usePwaInstall } from "@/lib/use-pwa-install";
 
 /**
@@ -15,7 +15,9 @@ import { usePwaInstall } from "@/lib/use-pwa-install";
  * (オーナー指示。仕様書に明記は無いため仮置きの構造。詳細はPRの完了報告を参照)。
  *
  * 項目は「ログイン/設定」「アプリをインストール」(対応環境のみ)「利用規約」
- * 「プライバシーポリシー」の4つ。既存の`BottomSheet`(並べ替え等で使用)をそのまま流用する。
+ * 「プライバシーポリシー」の4つ。右からスライドインする`SideDrawer`を使う
+ * (初期実装は下からの`BottomSheet`だったが、オーナーFBで「サイドから出る方が直感的」と
+ * 変更した)。
  */
 export function AppMenu() {
   const [open, setOpen] = useState(false);
@@ -40,7 +42,7 @@ export function AppMenu() {
         <MenuIcon />
       </button>
       {open && (
-        <BottomSheet title="メニュー" onClose={() => setOpen(false)}>
+        <SideDrawer title="メニュー" onClose={() => setOpen(false)}>
           <div className="flex flex-col">
             <Link
               href="/settings"
@@ -81,7 +83,7 @@ export function AppMenu() {
               プライバシーポリシー
             </Link>
           </div>
-        </BottomSheet>
+        </SideDrawer>
       )}
     </>
   );

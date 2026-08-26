@@ -69,6 +69,16 @@
   }
 }
 
+/* サイドドロワー(ハンバーガーメニュー)の右からのスライドイン */
+@keyframes paper-drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 /* トースト・追従ボタンの出現 */
 @keyframes paper-fade-up {
   from {
