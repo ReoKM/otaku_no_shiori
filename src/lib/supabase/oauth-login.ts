@@ -26,8 +26,14 @@ const OAUTH_CALLBACK_PATH = "/auth/callback";
  * S6の`LoginErrorNotice`(ログイン失敗時の表示)は「コールバックからエラーで復帰した場合」を
  * 前提にしている(docs/design/screens/S6_設定アカウント.md「状態」表)。`next`クエリパラメータは
  * `src/app/auth/callback/route.ts`が既に対応しているため、ここではS6自身のパスを固定値で渡す。
+ *
+ * `justLoggedIn=1`は「OAuthログイン直後にここへ戻ってきた」ことを`SettingsRoute`
+ * (`src/components/settings/SettingsRoute.tsx`)へ伝えるための印。ログイン成功時のみ
+ * `SettingsRoute`側でトップページへの自動遷移をトリガーする(既にログイン済みの状態で
+ * `/settings`を手動で開いた場合は自動遷移させない。オーナー報告: ログイン完了後に戻る操作を
+ * すると再度Googleのアカウント選択画面に戻ってしまう不具合の是正。詳細はPRの完了報告を参照)。
  */
-const RETURN_TO_SETTINGS_PATH = "/settings";
+const RETURN_TO_SETTINGS_PATH = "/settings?justLoggedIn=1";
 
 /**
  * `signInWithOAuth`に渡す`redirectTo`を組み立てる。
@@ -37,7 +43,7 @@ const RETURN_TO_SETTINGS_PATH = "/settings";
  * 同じ考え方。ユーザー入力は一切介在しない)。
  *
  * 例: `buildOAuthRedirectTo("https://example.com")`
- *   → `"https://example.com/auth/callback?next=%2Fsettings"`
+ *   → `"https://example.com/auth/callback?next=%2Fsettings%3FjustLoggedIn%3D1"`
  */
 export function buildOAuthRedirectTo(origin: string): string {
   const url = new URL(OAUTH_CALLBACK_PATH, origin);

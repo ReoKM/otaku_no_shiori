@@ -27,15 +27,15 @@ function fakeClient(response: SignInResponse) {
 const ORIGIN = "https://example.com";
 
 describe("buildOAuthRedirectTo", () => {
-  it("originに/auth/callbackとnext=/settingsを付けたURLを返す", () => {
+  it("originに/auth/callbackとnext=/settings?justLoggedIn=1を付けたURLを返す", () => {
     expect(buildOAuthRedirectTo(ORIGIN)).toBe(
-      "https://example.com/auth/callback?next=%2Fsettings",
+      "https://example.com/auth/callback?next=%2Fsettings%3FjustLoggedIn%3D1",
     );
   });
 
   it("末尾スラッシュ付きoriginでも二重スラッシュにならない", () => {
     expect(buildOAuthRedirectTo("https://example.com/")).toBe(
-      "https://example.com/auth/callback?next=%2Fsettings",
+      "https://example.com/auth/callback?next=%2Fsettings%3FjustLoggedIn%3D1",
     );
   });
 });
@@ -50,7 +50,7 @@ describe("signInWithProvider", () => {
     expect(signInWithOAuth).toHaveBeenCalledTimes(1);
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: "twitter",
-      options: { redirectTo: "https://example.com/auth/callback?next=%2Fsettings" },
+      options: { redirectTo: "https://example.com/auth/callback?next=%2Fsettings%3FjustLoggedIn%3D1" },
     });
   });
 
@@ -62,7 +62,7 @@ describe("signInWithProvider", () => {
     expect(result).toEqual({ ok: true });
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: "google",
-      options: { redirectTo: "https://example.com/auth/callback?next=%2Fsettings" },
+      options: { redirectTo: "https://example.com/auth/callback?next=%2Fsettings%3FjustLoggedIn%3D1" },
     });
   });
 
@@ -91,7 +91,7 @@ describe("signInWithProvider", () => {
 
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: "twitter",
-      options: { redirectTo: "https://good.example/auth/callback?next=%2Fsettings" },
+      options: { redirectTo: "https://good.example/auth/callback?next=%2Fsettings%3FjustLoggedIn%3D1" },
     });
   });
 });
