@@ -76,7 +76,7 @@ export function EntryRow({
   onConfirmDelete,
   onCancelDelete,
 }: EntryRowProps) {
-  const rowRef = useRef<HTMLButtonElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   // Issue #63: 強調表示対象になったタイミングで、この行の位置までスクロールする。
   useEffect(() => {
@@ -214,10 +214,19 @@ export function EntryRow({
   }
 
   return (
-    <button
-      type="button"
+    <div
       ref={rowRef}
+      role="button"
+      tabIndex={0}
       onClick={onStartEdit}
+      onKeyDown={(event) => {
+        // 行全体がボタン代わりのため、Enter/Spaceでもタップと同じ「編集開始」を起こす
+        // (地図リンクをネストするため<button>ではなく<div role="button">にした分の補い)
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onStartEdit();
+        }
+      }}
       className={`flex min-h-18 w-full items-center gap-3 border-t border-paper-divider px-4 py-2.5 text-left first:border-t-0 ${
         highlighted ? "bg-sakura-soft" : "bg-paper-surface"
       }`}
@@ -229,10 +238,17 @@ export function EntryRow({
       <span className="min-w-0 flex-1">
         <span className="block text-base/[1.4] font-medium text-ink">{entry.title}</span>
         {entry.place_name && (
-          <span className="mt-1 flex items-center gap-1.5">
-            <PinIcon />
-            <span className="min-w-0 truncate text-[12.5px] text-ink-sub">{entry.place_name}</span>
-          </span>
+          // 行全体のonClick(編集開始)に食われないよう、リンク自体でクリックを止める
+          // (<a>を<div role="button">の中に置くこと自体はHTML上有効)
+          <a
+            href={buildGoogleMapsSearchUrl(entry.place_name)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+            className="mt-1 inline-block text-[12.5px] font-bold text-sakura-ink"
+          >
+            地図で見る
+          </a>
         )}
         {entry.memo && (
           <span className="mt-1 block line-clamp-2 text-[12.5px] whitespace-pre-wrap text-ink-muted">
@@ -241,26 +257,7 @@ export function EntryRow({
         )}
       </span>
       <ChevronIcon />
-    </button>
-  );
-}
-
-function PinIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      aria-hidden="true"
-      className="flex-none text-ink-muted"
-    >
-      <path d="M6 10.5s3.6-3.4 3.6-5.8A3.6 3.6 0 0 0 2.4 4.7C2.4 7.1 6 10.5 6 10.5Z" />
-      <circle cx="6" cy="4.8" r="1.1" />
-    </svg>
+    </div>
   );
 }
 
