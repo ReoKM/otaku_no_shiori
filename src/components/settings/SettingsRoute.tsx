@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resolveOAuthProvider } from "@/lib/supabase/auth-provider";
+import { shouldAutoRedirectToHome } from "@/lib/post-login-redirect";
 import { LegalLinks } from "./LegalLinks";
 import { LoggedInSection } from "./LoggedInSection";
 import { LoggedOutSection } from "./LoggedOutSection";
@@ -31,10 +32,18 @@ type AuthState = { status: "loading" } | { status: "loggedOut" } | { status: "lo
  * `onAuthStateChange`(ログアウトボタン押下等での状態変化の反映)の2本立てで行う。
  * `getUser()`を使う理由(`getSession()`ではない)は`src/lib/supabase/middleware.ts`と同じ
  * (Supabase Authサーバーにトークンを問い合わせて検証し直すため)。
+ *
+ * OAuthログイン直後(`justLoggedIn=1`)にログインが確認できた場合は、トップページ(S1)へ
+ * 自動遷移する(`src/lib/post-login-redirect.ts`の`shouldAutoRedirectToHome`参照)。
+ * オーナー報告: 「ログイン完了後に戻る操作をすると、ブラウザ履歴上のGoogle側ページ
+ * (アカウント選択画面)に戻ってしまう」不具合の是正。戻る操作自体を不要にすることで解消する
+ * (S6のドキュメントにはこの自動遷移の定義が無いため仮置き。詳細はPRの完了報告を参照)。
  */
 export function SettingsRoute() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const loginFailed = searchParams.get("authError") !== null;
+  const justLoggedIn = searchParams.get("justLoggedIn") === "1";
   const [authState, setAuthState] = useState<AuthState>({ status: "loading" });
 
   useEffect(() => {
@@ -86,6 +95,19 @@ export function SettingsRoute() {
       };
     }
   }, []);
+
+  useEffect(() => {
+    if (!shouldAutoRedirectToHome(justLoggedIn, authState.status)) {
+      return;
+    }
+    // 「ログイン完了」の表示を一瞬見せてからトップページへ遷移する(即時遷移だと
+    // ログインできたことに気付けないため)。`router.replace`は履歴に新しいエントリを
+    // 積まないため、トップページからさらに戻る操作をしても`/settings`には戻らない。
+    const timer = window.setTimeout(() => {
+      router.replace("/");
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [justLoggedIn, authState.status, router]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-paper">
