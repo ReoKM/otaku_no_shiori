@@ -6,6 +6,7 @@ import { AdSlotPlaceholder } from "@/components/common/AdSlotPlaceholder";
 import { AppMenu } from "@/components/common/AppMenu";
 import { EmptyState } from "@/components/shiori/EmptyState";
 import { FabButton } from "@/components/shiori/FabButton";
+import { LoginPromoCard } from "@/components/shiori/LoginPromoCard";
 import { ShioriCard } from "@/components/shiori/ShioriCard";
 import { ShioriListSkeleton } from "@/components/shiori/ShioriListSkeleton";
 import { listShiori } from "@/lib/guest-store";
@@ -73,6 +74,7 @@ export default function Home() {
             </div>
           ))}
         <AdSlotPlaceholder />
+        <LoginPromoCard />
       </main>
       {/* しおりが1件以上あるときは右下に追従ボタンが出るため、フッターのリンクが
           隠れないよう下余白を広げる */}
